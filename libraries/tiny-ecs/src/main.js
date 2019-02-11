@@ -11,7 +11,7 @@ light.position.z = -1;
 scene.add(light);
 scene.add(new THREE.AmbientLight());
 
-const renderer = window.renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 document.body.append(renderer.domElement);
 const camera = new THREE.PerspectiveCamera();
 camera.position.set(10, 10, 10);
