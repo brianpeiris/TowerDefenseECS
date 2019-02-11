@@ -119,6 +119,15 @@ function update(delta, elapsed) {
   }
 }
 
+class GravitySystem extends System {
+  update(delta) {
+    const entities = this.entities.queryComponents([Velocity, Gravity]);
+    for (const entity of entities) {
+      entity.velocity.y += entity.gravity.force * delta;
+    }
+  }
+}
+
 class VelocitySystem extends System {
   update(delta) {
     const entities = this.entities.queryComponents([Velocity, Mesh]);
@@ -126,15 +135,6 @@ class VelocitySystem extends System {
       entity.mesh.mesh.position.x += entity.velocity.x * delta;
       entity.mesh.mesh.position.y += entity.velocity.y * delta;
       entity.mesh.mesh.position.z += entity.velocity.z * delta;
-    }
-  }
-}
-
-class GravitySystem extends System {
-  update(delta) {
-    const entities = this.entities.queryComponents([Velocity, Gravity]);
-    for (const entity of entities) {
-      entity.velocity.y += entity.gravity.force * delta;
     }
   }
 }
@@ -258,6 +258,55 @@ class EnemyWaveSystem extends System {
   }
 }
 
+class ResourceSystem extends System {
+  constructor(entities) {
+    super(entities);
+    this.power = 150;
+    this.items = [
+      {name: 'mine', cost: 50},
+      {name: 'turret', cost: 100},
+      {name: 'vehicle', cost: 150},
+      {name: 'collector', cost: 150},
+    ];
+    this.itemsByName = {};
+    for (const item of this.items) {
+      const {name, cost} = item;
+      this.itemsByName[name] = item;
+      const itemEl = document.importNode(itemTemplate.content, true);
+
+      const input = itemEl.querySelector('input');
+      item.input = input;
+      input.id = name;
+      input.value = name;
+      input.addEventListener('change', () => {
+        if (input.checked) this.currentItem = item;
+      });
+
+      const label = itemEl.querySelector('label');
+      label.setAttribute('for', name);
+      label.textContent = `${name}\n${cost}`;
+      label.addEventListener('mousedown', () => {
+        if (input.disabled) return;
+        input.checked = true;
+        this.currentItem = item;
+      });
+      itemSelection.append(itemEl);
+    }
+    this.items[0].input.checked = true;
+    this.currentItem = this.items[0];
+  }
+  update(delta) {
+    const entities = this.entities.queryComponents([Collector]);
+    for (const entity of entities) {
+      this.power += entity.collector.rate * delta;
+    }
+    power.textContent = this.power.toFixed();
+    for (const item of this.items) {
+      item.input.disabled = this.power < item.cost;
+    }
+  }
+}
+
 class PlacementSystem extends System {
   constructor(entities, resourceSystem) {
     super(entities);
@@ -290,9 +339,6 @@ class PlacementSystem extends System {
           break;
         case 'collector':
           item = createCollector();
-          break;
-        case 'enemy':
-          item = createEnemy();
           break;
       }
       this.resourceSystem.power -= this.resourceSystem.itemsByName[itemName].cost;
@@ -384,57 +430,8 @@ class GameOverSystem extends System {
   }
 }
 
-class ResourceSystem extends System {
-  constructor(entities) {
-    super(entities);
-    this.power = 150;
-    this.items = [
-      {name: 'mine', cost: 50},
-      {name: 'turret', cost: 100},
-      {name: 'vehicle', cost: 150},
-      {name: 'collector', cost: 150},
-    ];
-    this.itemsByName = {};
-    for (const item of this.items) {
-      const {name, cost} = item;
-      this.itemsByName[name] = item;
-      const itemEl = document.importNode(itemTemplate.content, true);
-
-      const input = itemEl.querySelector('input');
-      item.input = input;
-      input.id = name;
-      input.value = name;
-      input.addEventListener('change', () => {
-        if (input.checked) this.currentItem = item;
-      });
-
-      const label = itemEl.querySelector('label');
-      label.setAttribute('for', name);
-      label.textContent = `${name}\n${cost}`;
-      label.addEventListener('mousedown', () => {
-        if (input.disabled) return;
-        input.checked = true;
-        this.currentItem = item;
-      });
-      itemSelection.append(itemEl);
-    }
-    this.items[0].input.checked = true;
-    this.currentItem = this.items[0];
-  }
-  update(delta) {
-    const entities = this.entities.queryComponents([Collector]);
-    for (const entity of entities) {
-      this.power += entity.collector.rate * delta;
-    }
-    power.textContent = this.power.toFixed();
-    for (const item of this.items) {
-      item.input.disabled = this.power < item.cost;
-    }
-  }
-}
-
-systems.push(new VelocitySystem(entities));
 systems.push(new GravitySystem(entities));
+systems.push(new VelocitySystem(entities));
 systems.push(new CollisionSystem(entities));
 systems.push(new ExplosiveSystem(entities));
 systems.push(new OnboardRemover(entities));
@@ -478,14 +475,13 @@ function createEnemy() {
   entity.addTag('enemy');
   entity.addComponent(Mesh);
   entity.mesh.mesh = createBox('green');
-  scene.add(entity.mesh.mesh);
   entity.addComponent(Velocity);
   entity.addComponent(Collider);
+  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
   entity.explosive.destructible = false;
-  entity.addTag("enemy");
-  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.velocity.z = 1.5;
+  scene.add(entity.mesh.mesh);
   return entity;
 }
 
@@ -510,15 +506,16 @@ function createProjectile() {
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
   entity.explosive.explodes = 'enemy';
+  entity.addComponent(Gravity);
   entity.addComponent(Velocity);
   entity.velocity.z = -20.0;
-  entity.addComponent(Gravity);
   scene.add(entity.mesh.mesh);
   return entity;
 }
 
 function createTurret(withCollider=true) {
   const entity = entities.createEntity();
+  entity.addComponent(Turret);
   entity.addComponent(Mesh);
   entity.mesh.mesh = createBox('blue');
   if (withCollider) {
@@ -526,7 +523,6 @@ function createTurret(withCollider=true) {
     entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   }
   scene.add(entity.mesh.mesh);
-  entity.addComponent(Turret);
   return entity;
 }
 
@@ -548,11 +544,11 @@ function createTurretVehicle() {
 
 function createCollector() {
   const entity = entities.createEntity();
+  entity.addComponent(Collector);
   entity.addComponent(Mesh);
   entity.mesh.mesh = createBox('orange');
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   scene.add(entity.mesh.mesh);
-  entity.addComponent(Collector);
   return entity;
 }
