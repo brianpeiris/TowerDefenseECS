@@ -517,12 +517,14 @@ function createProjectile() {
   return entity;
 }
 
-function createTurret() {
+function createTurret(withCollider=true) {
   const entity = entities.createEntity();
   entity.addComponent(Mesh);
   entity.mesh.mesh = createBox('blue');
-  entity.addComponent(Collider);
-  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
+  if (withCollider) {
+    entity.addComponent(Collider);
+    entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
+  }
   scene.add(entity.mesh.mesh);
   entity.addComponent(Turret);
   return entity;
@@ -535,7 +537,7 @@ function createTurretVehicle() {
   entity.mesh.mesh = createBox('yellow', 0.9);
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  const turret = createTurret();
+  const turret = createTurret(false);
   turret.firingRate = 1;
   turret.mesh.mesh.position.y = 0.5;
   entity.mesh.mesh.add(turret.mesh.mesh);
