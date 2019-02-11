@@ -89,8 +89,8 @@ function Explosive() {
 function ToRemove() {}
 
 function Turret() {
-  this.firingRate = 2;
-  this.timeUntilFire = this.firingRate;
+  this.firingRate = 1 / 2;
+  this.timeUntilFire = 1 / this.firingRate;
 }
 
 function Vehicle() {
@@ -331,7 +331,7 @@ class TurretSystem extends System {
       if (entity.turret.timeUntilFire <= 0) {
         const projectile = createProjectile();
         entity.mesh.mesh.getWorldPosition(projectile.mesh.mesh.position);
-        entity.turret.timeUntilFire = entity.turret.firingRate;
+        entity.turret.timeUntilFire = 1 / entity.turret.firingRate;
       }
     }
   }
