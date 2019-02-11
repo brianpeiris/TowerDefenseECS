@@ -446,7 +446,7 @@ systems.push(new VehicleSystem(entities));
 systems.push(new GameOverSystem(entities, enemyWaveSystem));
 
 
-// App
+// Entity factories
 
 
 function createFloor() {
