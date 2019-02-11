@@ -323,7 +323,7 @@ class PlacementSystem extends System {
       this.mouse.x = e.clientX / window.innerWidth * 2 - 1;
       this.mouse.y = (window.innerHeight - e.clientY) / window.innerHeight * 2 - 1;
     });
-    document.addEventListener('click', e => {
+    document.addEventListener('click', () => {
       if (!this.placeholder.visible) return;
       const itemName = this.resourceSystem.currentItem.name;
       let item;

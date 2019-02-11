@@ -5,6 +5,9 @@
   },
   "devDependencies": {
     "browser-sync": "^2.26.3",
+    "eslint": "^5.13.0",
+    "eslint-config-prettier": "^4.0.0",
+    "eslint-plugin-prettier": "^3.0.1",
     "webpack": "^4.29.0",
     "webpack-cli": "^3.2.1"
   }
