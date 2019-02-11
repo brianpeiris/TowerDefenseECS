@@ -69,7 +69,7 @@ function Velocity() {
 }
 
 function Gravity() {
-  this.force = -0.8;
+  this.force = -9.8;
 }
 
 function Mesh() {
@@ -134,7 +134,7 @@ class GravitySystem extends System {
   update(delta) {
     const entities = this.entities.queryComponents([Velocity, Gravity]);
     for (const entity of entities) {
-      entity.velocity.y += entity.gravity.force;
+      entity.velocity.y += entity.gravity.force * delta;
     }
   }
 }
@@ -511,7 +511,7 @@ function createProjectile() {
   entity.addComponent(Explosive);
   entity.explosive.explodes = 'enemy';
   entity.addComponent(Velocity);
-  entity.velocity.z = -40.0;
+  entity.velocity.z = -20.0;
   entity.addComponent(Gravity);
   scene.add(entity.mesh.mesh);
   return entity;
