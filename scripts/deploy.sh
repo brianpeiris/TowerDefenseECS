@@ -9,7 +9,7 @@ git checkout gh-pages
 
 git merge master
 
-bash "./$scriptDirectory/build.sh"
+bash "$scriptDirectory/build.sh"
 
 cd "$rootDirectory";
 for library in $(ls libraries); do

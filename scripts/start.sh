@@ -7,6 +7,6 @@ for library in $(ls libraries); do
 	libraryDirectory="$rootDirectory/libraries/$library"
 	npx webpack "$libraryDirectory/src/main.js" -o "$libraryDirectory/dist/main.js" --mode development -w &
 done
-npx browser-sync start -s -w --no-open --no-notify --no-ghost-ui --directory &
+npx browser-sync start -s -w --no-open --no-notify --no-ghost-ui &
 trap 'trap - SIGTERM && kill 0' SIGINT SIGTERM EXIT
 wait

@@ -37,7 +37,7 @@
         padding: 0.2em 0;
         align-items: center;
       }
-      li a {
+      a {
         text-decoration: none;
       }
       .info-link {
@@ -76,7 +76,7 @@
   <body>
     <template id=""> </template>
     <div>
-      <h1>TowerDefenseECS<br /><span>TodoMVC for ECS libraries</span></h1>
+      <a href="/"><h1>TowerDefenseECS<br /><span>TodoMVC for ECS libraries</span></h1></a>
       <ol id="list"></ol>
     </div>
     <iframe name="viewer"></iframe>
@@ -101,7 +101,7 @@
         const sicon = name => `<i class="fas fa-${name}"></i>`;
         const bicon = name => `<i class="fab fa-${name}"></i>`;
         li.innerHTML = `
-          <a href="libraries/${name}/index.html" target="viewer">${name}</a>
+          <a href="libraries/${name}/" target="viewer">${name}</a>
           <a class="info-link" href="libraries/${name}/index.html?perf" target="viewer">${sicon('stopwatch')}</i></a>
           <a class="info-link" href="${codeUrl}" target="_blank" rel="noopener">${sicon('code')}</a>
           <a class="info-link" href="${githubUrl}" target="_blank" rel="noopener">${bicon('github')}</a>
