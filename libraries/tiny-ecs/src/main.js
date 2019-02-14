@@ -1,36 +1,49 @@
 //
-// THREE Boilerplate
+// App Boilerplate
 //
 
 const THREE = require("three");
-const scene = new THREE.Scene();
-const light = new THREE.DirectionalLight();
-light.position.x = 0.5;
-light.position.z = -1;
-scene.add(light);
-scene.add(new THREE.AmbientLight());
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-document.body.append(renderer.domElement);
-const camera = new THREE.PerspectiveCamera();
-camera.position.set(10, 10, 10);
-camera.lookAt(scene.position);
+class App {
+  constructor() {
+    this.scene = new THREE.Scene();
+    const light = new THREE.DirectionalLight();
+    light.position.x = 0.5;
+    light.position.z = -1;
+    this.scene.add(light);
+    this.scene.add(new THREE.AmbientLight());
 
-function setSize() {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
+    this._renderer = new THREE.WebGLRenderer({ antialias: true });
+    document.body.append(this._renderer.domElement);
+    this.camera = new THREE.PerspectiveCamera();
+    this.camera.position.set(10, 10, 10);
+    this.camera.lookAt(this.scene.position);
+
+    this._setSize();
+    window.addEventListener("resize", this._setSize.bind(this));
+
+    const clock = new THREE.Clock();
+    this.playing = true;
+    this._renderer.setAnimationLoop(() => {
+      if (!this.playing) return;
+      update(clock.getDelta(), clock.elapsedTime);
+      this._renderer.render(this.scene, this.camera);
+    });
+
+    this.ui = {
+      info: document.getElementById("info"),
+      itemTemplate: document.getElementById("itemTemplate"),
+      itemSelection: document.getElementById("itemSelection"),
+      power: document.getElementById("power")
+    };
+  }
+  _setSize() {
+    this._renderer.setSize(window.innerWidth, window.innerHeight);
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+  }
 }
-setSize();
-window.addEventListener("resize", setSize);
-
-const clock = new THREE.Clock();
-let playing = true;
-renderer.setAnimationLoop(() => {
-  if (!playing) return;
-  update(clock.getDelta(), clock.elapsedTime);
-  renderer.render(scene, camera);
-});
+const APP = new App();
 
 const createBox = (() => {
   const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
@@ -44,11 +57,6 @@ const createBox = (() => {
     return mesh;
   };
 })();
-
-const info = document.getElementById("info");
-const itemTemplate = document.getElementById("itemTemplate");
-const itemSelection = document.getElementById("itemSelection");
-const power = document.getElementById("power");
 
 //
 // ECS Setup
@@ -235,11 +243,11 @@ class EnemyWaveSystem extends System {
   update(delta, elapsed) {
     this.nextWave = this.waves[this.nextWaveIndex];
     if (!this.nextWave) {
-      info.textContent = "Final Wave!";
+      APP.ui.info.textContent = "Final Wave!";
       return;
     }
     const nextWaveTime = this.nextWave.time;
-    info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
+    APP.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
     if (elapsed < nextWaveTime) return;
     const occupied = {};
     for (let i = 0; i < this.nextWave.enemies; i++) {
@@ -272,7 +280,7 @@ class ResourceSystem extends System {
     for (const item of this.items) {
       const { name, cost } = item;
       this.itemsByName[name] = item;
-      const itemEl = document.importNode(itemTemplate.content, true);
+      const itemEl = document.importNode(APP.ui.itemTemplate.content, true);
 
       const input = itemEl.querySelector("input");
       item.input = input;
@@ -290,7 +298,7 @@ class ResourceSystem extends System {
         input.checked = true;
         this.currentItem = item;
       });
-      itemSelection.append(itemEl);
+      APP.ui.itemSelection.append(itemEl);
     }
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
@@ -300,7 +308,7 @@ class ResourceSystem extends System {
     for (const entity of entities) {
       this.power += entity.collector.rate * delta;
     }
-    power.textContent = this.power.toFixed();
+    APP.ui.power.textContent = this.power.toFixed();
     for (const item of this.items) {
       item.input.disabled = this.power < item.cost;
     }
@@ -317,7 +325,7 @@ class PlacementSystem extends System {
     this.placeholder = createBox("darkred", 1);
     this.placeholder.visible = false;
     this.worldPosition = new THREE.Vector3();
-    scene.add(this.placeholder);
+    APP.scene.add(this.placeholder);
     document.addEventListener("mousemove", e => {
       if (!this.mouse) this.mouse = new THREE.Vector2();
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -347,7 +355,7 @@ class PlacementSystem extends System {
   }
   update() {
     if (!this.mouse) return;
-    this.raycaster.setFromCamera(this.mouse, camera);
+    this.raycaster.setFromCamera(this.mouse, APP.camera);
     this.intersections.length = 0;
     this.raycaster.intersectObject(floor, false, this.intersections);
     if (this.intersections.length) {
@@ -409,8 +417,8 @@ class GameOverSystem extends System {
   update() {
     const entities = this.entities.queryTag("enemy");
     if (!entities.length && !this.enemyWaveSystem.nextWave) {
-      playing = false;
-      info.textContent = "You Win!";
+      APP.playing = false;
+      APP.ui.info.textContent = "You Win!";
       return;
     }
     for (const entity of entities) {
@@ -419,8 +427,8 @@ class GameOverSystem extends System {
       this.tempBox1.min.applyMatrix4(this.tempMatrix);
       this.tempBox1.max.applyMatrix4(this.tempMatrix);
       if (this.tempBox1.intersectsBox(this.collider)) {
-        playing = false;
-        info.textContent = "Game Over";
+        APP.playing = false;
+        APP.ui.info.textContent = "Game Over";
         break;
       }
     }
@@ -451,15 +459,15 @@ function createFloor() {
   floor.position.y = -0.51;
   floor.position.z = 0.5;
   floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
+  APP.scene.add(floor);
   const frontGrid = new THREE.GridHelper(5, 5);
   frontGrid.position.z = 3;
   frontGrid.position.y = -0.5;
-  scene.add(frontGrid);
+  APP.scene.add(frontGrid);
   const backGrid = new THREE.GridHelper(5, 5);
   backGrid.position.z = -2;
   backGrid.position.y = -0.5;
-  scene.add(backGrid);
+  APP.scene.add(backGrid);
   return floor;
 }
 const floor = createFloor();
@@ -475,7 +483,7 @@ function createEnemy() {
   entity.addComponent(Explosive);
   entity.explosive.destructible = false;
   entity.velocity.z = 1.5;
-  scene.add(entity.mesh.mesh);
+  APP.scene.add(entity.mesh.mesh);
   return entity;
 }
 
@@ -487,7 +495,7 @@ function createMine() {
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
   entity.explosive.explodes = "enemy";
-  scene.add(entity.mesh.mesh);
+  APP.scene.add(entity.mesh.mesh);
   return entity;
 }
 
@@ -503,7 +511,7 @@ function createProjectile() {
   entity.addComponent(Gravity);
   entity.addComponent(Velocity);
   entity.velocity.z = -20.0;
-  scene.add(entity.mesh.mesh);
+  APP.scene.add(entity.mesh.mesh);
   return entity;
 }
 
@@ -516,7 +524,7 @@ function createTurret(withCollider = true) {
     entity.addComponent(Collider);
     entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   }
-  scene.add(entity.mesh.mesh);
+  APP.scene.add(entity.mesh.mesh);
   return entity;
 }
 
@@ -532,7 +540,7 @@ function createTurretVehicle() {
   turret.mesh.mesh.position.y = 0.5;
   entity.mesh.mesh.add(turret.mesh.mesh);
   entity.vehicle.onboard = turret;
-  scene.add(entity.mesh.mesh);
+  APP.scene.add(entity.mesh.mesh);
   return entity;
 }
 
@@ -543,6 +551,6 @@ function createCollector() {
   entity.mesh.mesh = createBox("orange");
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  scene.add(entity.mesh.mesh);
+  APP.scene.add(entity.mesh.mesh);
   return entity;
 }
