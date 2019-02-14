@@ -1,7 +1,8 @@
 {
   "private": true,
   "dependencies": {
-    "three": "^0.101.1"
+    "three": "^0.101.1",
+    "stats.js": "^0.17.0"
   },
   "devDependencies": {
     "browser-sync": "^2.26.3",

@@ -2,7 +2,9 @@
 // App Boilerplate
 //
 
+const Stats = require("stats.js");
 const THREE = require("three");
+const { EntityManager } = require("tiny-ecs");
 
 class App {
   constructor() {
@@ -22,12 +24,19 @@ class App {
     this._setSize();
     window.addEventListener("resize", this._setSize.bind(this));
 
+    const stats = new Stats();
+    stats.showPanel(1);
+    stats.dom.style.left = "auto";
+    stats.dom.style.right = 0;
+    document.body.append(stats.dom);
     const clock = new THREE.Clock();
     this.playing = true;
     this._renderer.setAnimationLoop(() => {
       if (!this.playing) return;
+      stats.begin();
       update(clock.getDelta(), clock.elapsedTime);
       this._renderer.render(this.scene, this.camera);
+      stats.end();
     });
 
     this.ui = {
@@ -36,6 +45,8 @@ class App {
       itemSelection: document.getElementById("itemSelection"),
       power: document.getElementById("power")
     };
+
+    this.perfMode = location.search.includes("perf");
   }
   _setSize() {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
@@ -62,7 +73,6 @@ const createBox = (() => {
 // ECS Setup
 //
 
-const EntityManager = require("tiny-ecs").EntityManager;
 const entities = new EntityManager();
 
 //
@@ -227,45 +237,6 @@ class MeshRemover extends System {
   }
 }
 
-class EnemyWaveSystem extends System {
-  constructor(entities) {
-    super(entities);
-    this.waves = [
-      { time: 10, enemies: 5 },
-      { time: 30, enemies: 10 },
-      { time: 60, enemies: 20 },
-      { time: 90, enemies: 50 },
-      { time: 120, enemies: 100 }
-    ];
-    this.nextWaveIndex = 0;
-    this.nextWave = this.waves[0];
-  }
-  update(delta, elapsed) {
-    this.nextWave = this.waves[this.nextWaveIndex];
-    if (!this.nextWave) {
-      APP.ui.info.textContent = "Final Wave!";
-      return;
-    }
-    const nextWaveTime = this.nextWave.time;
-    APP.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
-    if (elapsed < nextWaveTime) return;
-    const occupied = {};
-    for (let i = 0; i < this.nextWave.enemies; i++) {
-      const enemy = createEnemy();
-      const lane = THREE.Math.randInt(-2, 2);
-      enemy.mesh.mesh.position.x = lane;
-      if (occupied[lane] === undefined) {
-        occupied[lane] = 0;
-      } else {
-        occupied[lane] -= 2;
-        enemy.mesh.mesh.position.z = occupied[lane];
-      }
-      enemy.mesh.mesh.position.z -= 5;
-    }
-    this.nextWaveIndex++;
-  }
-}
-
 class ResourceSystem extends System {
   constructor(entities) {
     super(entities);
@@ -405,6 +376,49 @@ class VehicleSystem extends System {
   }
 }
 
+class EnemyWaveSystem extends System {
+  constructor(entities) {
+    super(entities);
+    if (APP.perfMode) {
+      this.waves = [{ time: 0, enemies: 500 }];
+    } else {
+      this.waves = [
+        { time: 10, enemies: 5 },
+        { time: 30, enemies: 10 },
+        { time: 60, enemies: 20 },
+        { time: 90, enemies: 50 },
+        { time: 120, enemies: 100 }
+      ];
+    }
+    this.nextWaveIndex = 0;
+    this.nextWave = this.waves[0];
+  }
+  update(delta, elapsed) {
+    this.nextWave = this.waves[this.nextWaveIndex];
+    if (!this.nextWave) {
+      APP.ui.info.textContent = "Final Wave!";
+      return;
+    }
+    const nextWaveTime = this.nextWave.time;
+    APP.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
+    if (elapsed < nextWaveTime) return;
+    const occupied = {};
+    for (let i = 0; i < this.nextWave.enemies; i++) {
+      const enemy = createEnemy();
+      const lane = THREE.Math.randInt(-2, 2);
+      enemy.mesh.mesh.position.x = lane;
+      if (occupied[lane] === undefined) {
+        occupied[lane] = 0;
+      } else {
+        occupied[lane] -= 2;
+        enemy.mesh.mesh.position.z = occupied[lane];
+      }
+      enemy.mesh.mesh.position.z -= 5;
+    }
+    this.nextWaveIndex++;
+  }
+}
+
 class GameOverSystem extends System {
   constructor(entities, enemyWaveSystem) {
     super(entities);
@@ -441,14 +455,16 @@ systems.push(new CollisionSystem(entities));
 systems.push(new ExplosiveSystem(entities));
 systems.push(new OnboardRemover(entities));
 systems.push(new MeshRemover(entities));
-const enemyWaveSystem = new EnemyWaveSystem(entities);
-systems.push(enemyWaveSystem);
 const resourceSystem = new ResourceSystem(entities);
 systems.push(resourceSystem);
 systems.push(new PlacementSystem(entities, resourceSystem));
 systems.push(new TurretSystem(entities));
 systems.push(new VehicleSystem(entities));
-systems.push(new GameOverSystem(entities, enemyWaveSystem));
+const enemyWaveSystem = new EnemyWaveSystem(entities);
+systems.push(enemyWaveSystem);
+if (!APP.perfMode) {
+  systems.push(new GameOverSystem(entities, enemyWaveSystem));
+}
 
 //
 // Entity factories
@@ -553,4 +569,13 @@ function createCollector() {
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   APP.scene.add(entity.mesh.mesh);
   return entity;
+}
+
+if (APP.perfMode) {
+  for (let i = 0; i < 5; i++) {
+    for (let j = 0; j < 4; j++) {
+      const turret = createTurretVehicle();
+      turret.mesh.mesh.position.set(i - 2, 0, j + 2);
+    }
+  }
 }
