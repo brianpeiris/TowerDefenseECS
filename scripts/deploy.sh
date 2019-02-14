@@ -7,6 +7,8 @@ rootDirectory="$scriptDirectory/.."
 
 git checkout gh-pages
 
+git merge master
+
 bash "./$scriptDirectory/build.sh"
 
 cd "$rootDirectory";
