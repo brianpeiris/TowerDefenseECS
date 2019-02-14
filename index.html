@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>TowerDefenseECS</title>
+    <link
+      rel="stylesheet"
+      href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+      integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr"
+      crossorigin="anonymous"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: sans-serif;
+      }
+      body {
+        display: flex;
+      }
+      iframe {
+        border: none;
+        background: #eee;
+        height: 100%;
+        flex: 1;
+      }
+      ol {
+        padding: 0;
+        margin: 1em;
+      }
+      li {
+        list-style-type: none;
+        display: flex;
+        padding: 0.2em 0;
+        align-items: center;
+      }
+      li a {
+        text-decoration: none;
+      }
+      .info-link {
+        visibility: hidden;
+      }
+      .info-link:hover {
+        visibility: hidden;
+        background: #eee;
+      }
+      li:hover .info-link {
+        visibility: visible;
+      }
+      li a:first-child {
+        display: inline-block;
+        width: 12em;
+      }
+      h1 {
+        font-size: 18pt;
+        text-align: center;
+        margin-bottom: 1em;
+      }
+      h1 span {
+        font-size: 10pt;
+        font-weight: normal;
+      }
+      .fas,
+      .fab {
+        width: 1.5em;
+        height: 1.5em;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <template id=""> </template>
+    <div>
+      <h1>TowerDefenseECS<br /><span>TodoMVC for ECS libraries</span></h1>
+      <ol id="list"></ol>
+    </div>
+    <iframe name="viewer"></iframe>
+    <script>
+      const libraries = [
+        {
+          name: "tiny-ecs",
+          githubOwner: "bvalosek"
+        },
+        {
+          name: "js13k-ecs",
+          githubOwner: "kutuluk"
+        }
+      ];
+      const fragment = document.createDocumentFragment();
+      libraries.forEach(library => {
+        const { name, githubOwner, githubRepo } = library;
+        const li = document.createElement("li");
+        const codeUrl = `https://github.com/brianpeiris/TowerDefenseECS/blob/master/libraries/${name}/src/main.js`;
+        const githubUrl = `https://github.com/${githubOwner}/${githubRepo || name}`;
+        const npmUrl = `https://www.npmjs.com/package/${name}`;
+        const sicon = name => `<i class="fas fa-${name}"></i>`;
+        const bicon = name => `<i class="fab fa-${name}"></i>`;
+        li.innerHTML = `
+          <a href="libraries/${name}/index.html" target="viewer">${name}</a>
+          <a class="info-link" href="libraries/${name}/index.html?perf" target="viewer">${sicon('stopwatch')}</i></a>
+          <a class="info-link" href="${codeUrl}" target="_blank" rel="noopener">${sicon('code')}</a>
+          <a class="info-link" href="${githubUrl}" target="_blank" rel="noopener">${bicon('github')}</a>
+          <a class="info-link" href="${npmUrl}" target="_blank" rel="noopener">${bicon('npm')}</a>
+				`;
+        fragment.append(li);
+      });
+      document.getElementById("list").append(fragment);
+    </script>
+  </body>
+</html>
