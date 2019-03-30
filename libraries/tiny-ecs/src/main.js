@@ -8,19 +8,6 @@ const App = require("../../common/app.js");
 
 const APP = new App(update);
 
-const createBox = (() => {
-  const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-  const materials = {};
-  return (color, size = 0.8) => {
-    if (!materials[color]) {
-      materials[color] = new THREE.MeshStandardMaterial({ color });
-    }
-    const mesh = new THREE.Mesh(boxGeometry, materials[color]);
-    mesh.scale.setScalar(size);
-    return mesh;
-  };
-})();
-
 //
 // ECS Setup
 //
@@ -207,32 +194,22 @@ class PlacementSystem extends System {
   constructor(entities, resourceSystem) {
     super(entities);
     this.resourceSystem = resourceSystem;
-    this.raycaster = new THREE.Raycaster();
-    this.placeholder = createBox("darkred", 1);
-    this.placeholder.visible = false;
     this.worldPosition = new THREE.Vector3();
+    this.factories = {
+      mine: createMine,
+      turret: createTurret,
+      vehicle: createTurretVehicle,
+      collector: createCollector
+    };
+    this.placeholder = APP.createBox("darkred", 1);
+    this.placeholder.visible = false;
     APP.scene.add(this.placeholder);
-    document.addEventListener("click", () => {
+    APP.onCreate = (itemName, cost) => {
       if (!this.placeholder.visible) return;
-      const itemName = APP.currentItem.name;
-      let item;
-      switch (itemName) {
-        case "mine":
-          item = createMine();
-          break;
-        case "turret":
-          item = createTurret();
-          break;
-        case "vehicle":
-          item = createTurretVehicle();
-          break;
-        case "collector":
-          item = createCollector();
-          break;
-      }
-      this.resourceSystem.power -= APP.itemsByName[itemName].cost;
+      let item = this.factories[itemName]();
+      this.resourceSystem.power -= cost;
       item.mesh.mesh.position.copy(this.placeholder.position);
-    });
+    };
   }
   update() {
     const intersection = APP.getIntersection();
@@ -380,7 +357,7 @@ function createEnemy() {
   const entity = entities.createEntity();
   entity.addTag("enemy");
   entity.addComponent(Mesh);
-  entity.mesh.mesh = createBox("green");
+  entity.mesh.mesh = APP.createBox("green");
   entity.addComponent(Velocity);
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
@@ -394,7 +371,7 @@ function createEnemy() {
 function createMine() {
   const entity = entities.createEntity();
   entity.addComponent(Mesh);
-  entity.mesh.mesh = createBox("red");
+  entity.mesh.mesh = APP.createBox("red");
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
@@ -407,7 +384,7 @@ function createProjectile() {
   const entity = entities.createEntity();
   entity.addTag("projectile");
   entity.addComponent(Mesh);
-  entity.mesh.mesh = createBox("red", 0.2);
+  entity.mesh.mesh = APP.createBox("red", 0.2);
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
@@ -423,7 +400,7 @@ function createTurret(withCollider = true) {
   const entity = entities.createEntity();
   entity.addComponent(Turret);
   entity.addComponent(Mesh);
-  entity.mesh.mesh = createBox("blue");
+  entity.mesh.mesh = APP.createBox("blue");
   if (withCollider) {
     entity.addComponent(Collider);
     entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
@@ -436,7 +413,7 @@ function createTurretVehicle() {
   const entity = entities.createEntity();
   entity.addComponent(Vehicle);
   entity.addComponent(Mesh);
-  entity.mesh.mesh = createBox("yellow", 0.9);
+  entity.mesh.mesh = APP.createBox("yellow", 0.9);
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   const turret = createTurret(false);
@@ -452,7 +429,7 @@ function createCollector() {
   const entity = entities.createEntity();
   entity.addComponent(Collector);
   entity.addComponent(Mesh);
-  entity.mesh.mesh = createBox("orange");
+  entity.mesh.mesh = APP.createBox("orange");
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   APP.scene.add(entity.mesh.mesh);

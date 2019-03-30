@@ -85,7 +85,25 @@ class App {
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
     });
+    this.onCreate = () => {};
+    document.addEventListener("click", () => {
+      const itemName = this.currentItem.name;
+      this.onCreate(itemName, this.itemsByName[itemName].cost);
+    });
   }
+  createBox = (() => {
+    const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+    const materials = {};
+    return (color, size = 0.8) => {
+      if (!materials[color]) {
+        materials[color] = new THREE.MeshStandardMaterial({ color });
+      }
+      const mesh = new THREE.Mesh(boxGeometry, materials[color]);
+      mesh.scale.setScalar(size);
+      return mesh;
+    };
+  })();
+
   getIntersection() {
     if (!this.mouse) return null;
     this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -97,12 +115,14 @@ class App {
       return null;
     }
   }
+
   updatePower(power) {
     this.ui.power.textContent = power.toFixed();
     for (const item of this.items) {
       item.input.disabled = power < item.cost;
     }
   }
+
   _createFloor() {
     const floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 10), new THREE.MeshStandardMaterial());
     floor.position.y = -0.51;
@@ -119,6 +139,7 @@ class App {
     this.scene.add(backGrid);
     return floor;
   }
+
   _setSize() {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
     this.camera.aspect = window.innerWidth / window.innerHeight;
