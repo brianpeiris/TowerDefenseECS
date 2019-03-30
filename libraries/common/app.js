@@ -85,12 +85,23 @@ class App {
       this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
     });
+
+    this.placeholder = this.createBox("darkred", 1);
+    this.placeholder.visible = false;
+    this.scene.add(this.placeholder);
     this.onCreate = () => {};
     document.addEventListener("click", () => {
+      if (!this.placeholder.visible) return;
       const itemName = this.currentItem.name;
       this.onCreate(itemName, this.itemsByName[itemName].cost);
     });
   }
+
+  updatePlaceholder(showPlaceholder, x, z) {
+    this.placeholder.visible = showPlaceholder;
+    this.placeholder.position.set(x, 0, z);
+  }
+
   createBox = (() => {
     const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
     const materials = {};

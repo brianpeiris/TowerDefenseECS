@@ -194,33 +194,29 @@ class PlacementSystem {
       vehicle: createTurretVehicle,
       collector: createCollector
     };
-    this.placeholder = APP.createBox("darkred", 1);
-    this.placeholder.visible = false;
-    APP.scene.add(this.placeholder);
     APP.onCreate = (itemName, cost) => {
-      if (!this.placeholder.visible) return;
       let item = this.factories[itemName]();
       this.resourceSystem.power -= cost;
-      item.get(Mesh).mesh.position.copy(this.placeholder.position);
+      item.get(Mesh).mesh.position.copy(APP.placeholder.position);
     };
   }
   update() {
     const intersection = APP.getIntersection();
-    if (intersection) {
-      const entities = ecs.select(Mesh);
-      const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
-      this.placeholder.visible = !APP.currentItem.input.disabled;
-      entities.iterate(entity => {
-        entity.get(Mesh).mesh.getWorldPosition(this.worldPosition);
-        const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-        if (!entity.has(Projectile) && x === ex && z === ez) {
-          this.placeholder.visible = false;
-        }
-      });
-      this.placeholder.position.set(x, 0, z);
-    } else {
-      this.placeholder.visible = false;
+    if (!intersection) {
+      APP.updatePlaceholder(false);
+      return;
     }
+    const entities = ecs.select(Mesh);
+    const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
+    let showPlaceholder = !APP.currentItem.input.disabled;
+    entities.iterate(entity => {
+      entity.get(Mesh).mesh.getWorldPosition(this.worldPosition);
+      const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
+      if (!entity.has(Projectile) && x === ex && z === ez) {
+        showPlaceholder = false;
+      }
+    });
+    APP.updatePlaceholder(showPlaceholder, x, z);
   }
 }
 
