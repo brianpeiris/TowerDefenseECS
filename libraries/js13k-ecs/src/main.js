@@ -200,18 +200,10 @@ class ResourceSystem {
 class PlacementSystem {
   constructor(resourceSystem) {
     this.resourceSystem = resourceSystem;
-    this.mouse = null;
-    this.intersections = [];
-    this.raycaster = new THREE.Raycaster();
     this.placeholder = createBox("darkred", 1);
     this.placeholder.visible = false;
     this.worldPosition = new THREE.Vector3();
     APP.scene.add(this.placeholder);
-    document.addEventListener("mousemove", e => {
-      if (!this.mouse) this.mouse = new THREE.Vector2();
-      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-    });
     document.addEventListener("click", () => {
       if (!this.placeholder.visible) return;
       const itemName = APP.currentItem.name;
@@ -235,13 +227,9 @@ class PlacementSystem {
     });
   }
   update() {
-    if (!this.mouse) return;
-    this.raycaster.setFromCamera(this.mouse, APP.camera);
-    this.intersections.length = 0;
-    this.raycaster.intersectObject(floor, false, this.intersections);
-    if (this.intersections.length) {
+    const intersection = APP.getIntersection();
+    if (intersection) {
       const entities = ecs.select(Mesh);
-      const [intersection] = this.intersections;
       const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
       this.placeholder.visible = !APP.currentItem.input.disabled;
       entities.iterate(entity => {
@@ -382,24 +370,6 @@ ecs.process(...systems);
 //
 // Entity factories
 //
-
-function createFloor() {
-  const floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 10), new THREE.MeshStandardMaterial());
-  floor.position.y = -0.51;
-  floor.position.z = 0.5;
-  floor.rotation.x = -Math.PI / 2;
-  APP.scene.add(floor);
-  const frontGrid = new THREE.GridHelper(5, 5);
-  frontGrid.position.z = 3;
-  frontGrid.position.y = -0.5;
-  APP.scene.add(frontGrid);
-  const backGrid = new THREE.GridHelper(5, 5);
-  backGrid.position.z = -2;
-  backGrid.position.y = -0.5;
-  APP.scene.add(backGrid);
-  return floor;
-}
-const floor = createFloor();
 
 function createEnemy() {
   const entity = ecs.create();

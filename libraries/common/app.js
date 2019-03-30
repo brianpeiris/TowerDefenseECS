@@ -75,12 +75,49 @@ class App {
     }
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
+
+    this.floor = this._createFloor();
+    this.raycaster = new THREE.Raycaster();
+    this.intersections = [];
+    this.mouse = null;
+    document.addEventListener("mousemove", e => {
+      if (!this.mouse) this.mouse = new THREE.Vector2();
+      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
+    });
+  }
+  getIntersection() {
+    if (!this.mouse) return null;
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    this.intersections.length = 0;
+    this.raycaster.intersectObject(this.floor, false, this.intersections);
+    if (this.intersections.length) {
+      return this.intersections[0];
+    } else {
+      return null;
+    }
   }
   updatePower(power) {
     this.ui.power.textContent = power.toFixed();
     for (const item of this.items) {
       item.input.disabled = power < item.cost;
     }
+  }
+  _createFloor() {
+    const floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 10), new THREE.MeshStandardMaterial());
+    floor.position.y = -0.51;
+    floor.position.z = 0.5;
+    floor.rotation.x = -Math.PI / 2;
+    this.scene.add(floor);
+    const frontGrid = new THREE.GridHelper(5, 5);
+    frontGrid.position.z = 3;
+    frontGrid.position.y = -0.5;
+    this.scene.add(frontGrid);
+    const backGrid = new THREE.GridHelper(5, 5);
+    backGrid.position.z = -2;
+    backGrid.position.y = -0.5;
+    this.scene.add(backGrid);
+    return floor;
   }
   _setSize() {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
