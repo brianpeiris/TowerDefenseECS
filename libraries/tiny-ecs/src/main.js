@@ -193,48 +193,13 @@ class ResourceSystem extends System {
   constructor(entities) {
     super(entities);
     this.power = 150;
-    this.items = [
-      { name: "mine", cost: 50 },
-      { name: "turret", cost: 100 },
-      { name: "vehicle", cost: 150 },
-      { name: "collector", cost: 150 }
-    ];
-    this.itemsByName = {};
-    for (const item of this.items) {
-      const { name, cost } = item;
-      this.itemsByName[name] = item;
-      const itemEl = document.importNode(APP.ui.itemTemplate.content, true);
-
-      const input = itemEl.querySelector("input");
-      item.input = input;
-      input.id = name;
-      input.value = name;
-      input.addEventListener("change", () => {
-        if (input.checked) this.currentItem = item;
-      });
-
-      const label = itemEl.querySelector("label");
-      label.setAttribute("for", name);
-      label.textContent = `${name}\n${cost}`;
-      label.addEventListener("mousedown", () => {
-        if (input.disabled) return;
-        input.checked = true;
-        this.currentItem = item;
-      });
-      APP.ui.itemSelection.append(itemEl);
-    }
-    this.items[0].input.checked = true;
-    this.currentItem = this.items[0];
   }
   update(delta) {
     const entities = this.entities.queryComponents([Collector]);
     for (const entity of entities) {
       this.power += entity.collector.rate * delta;
     }
-    APP.ui.power.textContent = this.power.toFixed();
-    for (const item of this.items) {
-      item.input.disabled = this.power < item.cost;
-    }
+    APP.updatePower(this.power);
   }
 }
 
@@ -256,7 +221,7 @@ class PlacementSystem extends System {
     });
     document.addEventListener("click", () => {
       if (!this.placeholder.visible) return;
-      const itemName = this.resourceSystem.currentItem.name;
+      const itemName = APP.currentItem.name;
       let item;
       switch (itemName) {
         case "mine":
@@ -272,7 +237,7 @@ class PlacementSystem extends System {
           item = createCollector();
           break;
       }
-      this.resourceSystem.power -= this.resourceSystem.itemsByName[itemName].cost;
+      this.resourceSystem.power -= APP.itemsByName[itemName].cost;
       item.mesh.mesh.position.copy(this.placeholder.position);
     });
   }
@@ -285,7 +250,7 @@ class PlacementSystem extends System {
       const entities = this.entities.queryComponents([Mesh]);
       const [intersection] = this.intersections;
       const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
-      this.placeholder.visible = !this.resourceSystem.currentItem.input.disabled;
+      this.placeholder.visible = !APP.currentItem.input.disabled;
       for (const entity of entities) {
         entity.mesh.mesh.getWorldPosition(this.worldPosition);
         const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
