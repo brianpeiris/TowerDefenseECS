@@ -2,72 +2,11 @@
 // App Boilerplate
 //
 
-const Stats = require("stats.js");
 const THREE = require("three");
 const ecs = require("js13k-ecs/src/ecs").default;
+const App = require("../../common/app.js");
 
-class App {
-  constructor() {
-    this.scene = new THREE.Scene();
-    const light = new THREE.DirectionalLight();
-    light.position.x = 0.5;
-    light.position.z = -1;
-    this.scene.add(light);
-    this.scene.add(new THREE.AmbientLight());
-
-    this._renderer = new THREE.WebGLRenderer({ antialias: true });
-    document.body.append(this._renderer.domElement);
-    this.camera = new THREE.PerspectiveCamera();
-    this.camera.position.set(10, 10, 10);
-    this.camera.lookAt(this.scene.position);
-
-    this._setSize();
-    window.addEventListener("resize", this._setSize.bind(this));
-
-    const stats = new Stats();
-    stats.showPanel(1);
-    stats.dom.style.left = "auto";
-    stats.dom.style.right = 0;
-    document.body.append(stats.dom);
-    const clock = new THREE.Clock();
-    this.playing = true;
-    this._renderer.setAnimationLoop(() => {
-      if (!this.playing) return;
-      stats.begin();
-      update(clock.getDelta(), clock.elapsedTime);
-      this._renderer.render(this.scene, this.camera);
-      stats.end();
-    });
-
-    this.ui = {
-      info: document.getElementById("info"),
-      itemTemplate: document.getElementById("itemTemplate"),
-      itemSelection: document.getElementById("itemSelection"),
-      power: document.getElementById("power")
-    };
-
-    this.perfMode = location.search.includes("perf");
-  }
-  _setSize() {
-    this._renderer.setSize(window.innerWidth, window.innerHeight);
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
-  }
-}
-const APP = new App();
-
-const createBox = (() => {
-  const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-  const materials = {};
-  return (color, size = 0.8) => {
-    if (!materials[color]) {
-      materials[color] = new THREE.MeshStandardMaterial({ color });
-    }
-    const mesh = new THREE.Mesh(boxGeometry, materials[color]);
-    mesh.scale.setScalar(size);
-    return mesh;
-  };
-})();
+const APP = new App(update);
 
 //
 // Components
@@ -236,108 +175,48 @@ class MeshRemover {
 class ResourceSystem {
   constructor() {
     this.power = 150;
-    this.items = [
-      { name: "mine", cost: 50 },
-      { name: "turret", cost: 100 },
-      { name: "vehicle", cost: 150 },
-      { name: "collector", cost: 150 }
-    ];
-    this.itemsByName = {};
-    for (const item of this.items) {
-      const { name, cost } = item;
-      this.itemsByName[name] = item;
-      const itemEl = document.importNode(APP.ui.itemTemplate.content, true);
-
-      const input = itemEl.querySelector("input");
-      item.input = input;
-      input.id = name;
-      input.value = name;
-      input.addEventListener("change", () => {
-        if (input.checked) this.currentItem = item;
-      });
-
-      const label = itemEl.querySelector("label");
-      label.setAttribute("for", name);
-      label.textContent = `${name}\n${cost}`;
-      label.addEventListener("mousedown", () => {
-        if (input.disabled) return;
-        input.checked = true;
-        this.currentItem = item;
-      });
-      APP.ui.itemSelection.append(itemEl);
-    }
-    this.items[0].input.checked = true;
-    this.currentItem = this.items[0];
   }
   update(delta) {
     ecs.select(Collector).iterate(entity => {
       this.power += entity.get(Collector).rate * delta;
     });
-    APP.ui.power.textContent = this.power.toFixed();
-    for (const item of this.items) {
-      item.input.disabled = this.power < item.cost;
-    }
+    APP.updatePower(this.power);
   }
 }
 
 class PlacementSystem {
   constructor(resourceSystem) {
     this.resourceSystem = resourceSystem;
-    this.mouse = null;
-    this.intersections = [];
-    this.raycaster = new THREE.Raycaster();
-    this.placeholder = createBox("darkred", 1);
-    this.placeholder.visible = false;
     this.worldPosition = new THREE.Vector3();
-    APP.scene.add(this.placeholder);
-    document.addEventListener("mousemove", e => {
-      if (!this.mouse) this.mouse = new THREE.Vector2();
-      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-    });
-    document.addEventListener("click", () => {
-      if (!this.placeholder.visible) return;
-      const itemName = this.resourceSystem.currentItem.name;
-      let item;
-      switch (itemName) {
-        case "mine":
-          item = createMine();
-          break;
-        case "turret":
-          item = createTurret();
-          break;
-        case "vehicle":
-          item = createTurretVehicle();
-          break;
-        case "collector":
-          item = createCollector();
-          break;
-      }
-      this.resourceSystem.power -= this.resourceSystem.itemsByName[itemName].cost;
-      item.get(Mesh).mesh.position.copy(this.placeholder.position);
-    });
+    this.factories = {
+      mine: createMine,
+      turret: createTurret,
+      vehicle: createTurretVehicle,
+      collector: createCollector
+    };
+    APP.onCreate = (itemName, cost) => {
+      let item = this.factories[itemName]();
+      this.resourceSystem.power -= cost;
+      item.get(Mesh).mesh.position.copy(APP.placeholder.position);
+    };
   }
   update() {
-    if (!this.mouse) return;
-    this.raycaster.setFromCamera(this.mouse, APP.camera);
-    this.intersections.length = 0;
-    this.raycaster.intersectObject(floor, false, this.intersections);
-    if (this.intersections.length) {
-      const entities = ecs.select(Mesh);
-      const [intersection] = this.intersections;
-      const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
-      this.placeholder.visible = !this.resourceSystem.currentItem.input.disabled;
-      entities.iterate(entity => {
-        entity.get(Mesh).mesh.getWorldPosition(this.worldPosition);
-        const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-        if (!entity.has(Projectile) && x === ex && z === ez) {
-          this.placeholder.visible = false;
-        }
-      });
-      this.placeholder.position.set(x, 0, z);
-    } else {
-      this.placeholder.visible = false;
+    const intersection = APP.getIntersection();
+    if (!intersection) {
+      APP.updatePlaceholder(false);
+      return;
     }
+    const entities = ecs.select(Mesh);
+    const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
+    let showPlaceholder = !APP.currentItem.input.disabled;
+    entities.iterate(entity => {
+      entity.get(Mesh).mesh.getWorldPosition(this.worldPosition);
+      const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
+      if (!entity.has(Projectile) && x === ex && z === ez) {
+        showPlaceholder = false;
+      }
+    });
+    APP.updatePlaceholder(showPlaceholder, x, z);
   }
 }
 
@@ -370,45 +249,26 @@ class VehicleSystem {
 
 class EnemyWaveSystem {
   constructor() {
-    if (APP.perfMode) {
-      this.waves = [{ time: 0, enemies: 500 }];
-    } else {
-      this.waves = [
-        { time: 10, enemies: 5 },
-        { time: 30, enemies: 10 },
-        { time: 60, enemies: 20 },
-        { time: 90, enemies: 50 },
-        { time: 120, enemies: 100 }
-      ];
-    }
-    this.nextWaveIndex = 0;
-    this.nextWave = this.waves[0];
     this.elapsed = 0;
+    this.currentWave = APP.waves[0];
   }
   update(delta) {
     this.elapsed += delta;
-    this.nextWave = this.waves[this.nextWaveIndex];
-    if (!this.nextWave) {
-      APP.ui.info.textContent = "Final Wave!";
-      return;
-    }
-    const nextWaveTime = this.nextWave.time;
-    APP.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - this.elapsed).toFixed(1)}`;
-    if (this.elapsed < nextWaveTime) return;
+    const currentWave = APP.getCurrentWave(this.elapsed);
+    if (currentWave === this.currentWave) return;
+    this.currentWave = currentWave;
+    this.generateWave(currentWave);
+  }
+  generateWave(wave) {
+    if (!wave) return;
     const occupied = {};
-    for (let i = 0; i < this.nextWave.enemies; i++) {
+    for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
       const lane = THREE.Math.randInt(-2, 2);
       enemy.get(Mesh).mesh.position.x = lane;
-      if (occupied[lane] === undefined) {
-        occupied[lane] = 0;
-      } else {
-        occupied[lane] -= 2;
-        enemy.get(Mesh).mesh.position.z = occupied[lane];
-      }
-      enemy.get(Mesh).mesh.position.z -= 5;
+      occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
+      enemy.get(Mesh).mesh.position.z = occupied[lane] - 5;
     }
-    this.nextWaveIndex++;
   }
 }
 
@@ -422,7 +282,7 @@ class GameOverSystem {
   }
   update() {
     const entities = ecs.select(Enemy);
-    if (!entities.length && !this.enemyWaveSystem.nextWave) {
+    if (!entities.length && !this.enemyWaveSystem.currentWave) {
       APP.playing = false;
       APP.ui.info.textContent = "You Win!";
       return;
@@ -466,28 +326,10 @@ ecs.process(...systems);
 // Entity factories
 //
 
-function createFloor() {
-  const floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 10), new THREE.MeshStandardMaterial());
-  floor.position.y = -0.51;
-  floor.position.z = 0.5;
-  floor.rotation.x = -Math.PI / 2;
-  APP.scene.add(floor);
-  const frontGrid = new THREE.GridHelper(5, 5);
-  frontGrid.position.z = 3;
-  frontGrid.position.y = -0.5;
-  APP.scene.add(frontGrid);
-  const backGrid = new THREE.GridHelper(5, 5);
-  backGrid.position.z = -2;
-  backGrid.position.y = -0.5;
-  APP.scene.add(backGrid);
-  return floor;
-}
-const floor = createFloor();
-
 function createEnemy() {
   const entity = ecs.create();
   entity.add(new Enemy());
-  const mesh = new Mesh(createBox("green"));
+  const mesh = new Mesh(APP.createBox("green"));
   entity.add(mesh);
   entity.add(new Velocity(0, 0, 1.5));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh.mesh)));
@@ -498,7 +340,7 @@ function createEnemy() {
 
 function createMine() {
   const entity = ecs.create();
-  const mesh = createBox("red");
+  const mesh = APP.createBox("red");
   entity.add(new Mesh(mesh));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
   entity.add(new Explosive(Enemy));
@@ -508,7 +350,8 @@ function createMine() {
 
 function createProjectile() {
   const entity = ecs.create();
-  const mesh = createBox("red", 0.2);
+  const mesh = APP.createBox("red", 0.2);
+  entity.add(new Projectile());
   entity.add(new Mesh(mesh));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
   entity.add(new Explosive(Enemy));
@@ -521,7 +364,7 @@ function createProjectile() {
 function createTurret(withCollider = true) {
   const entity = ecs.create();
   entity.add(new Turret());
-  const mesh = createBox("blue");
+  const mesh = APP.createBox("blue");
   entity.add(new Mesh(mesh));
   if (withCollider) {
     entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
@@ -536,7 +379,7 @@ function createTurretVehicle() {
   const turretMesh = turret.get(Mesh).mesh;
   turretMesh.position.y = 0.5;
   entity.add(new Vehicle(turret));
-  const mesh = createBox("yellow", 0.9);
+  const mesh = APP.createBox("yellow", 0.9);
   mesh.add(turretMesh);
   entity.add(new Mesh(mesh));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
@@ -547,7 +390,7 @@ function createTurretVehicle() {
 function createCollector() {
   const entity = ecs.create();
   entity.add(new Collector());
-  const mesh = createBox("orange");
+  const mesh = APP.createBox("orange");
   entity.add(new Mesh(mesh));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
   APP.scene.add(mesh);

@@ -13,6 +13,7 @@ bash "$scriptDirectory/build.sh"
 
 cd "$rootDirectory";
 for library in $(ls libraries); do
+	if [[ $library == "common" ]]; then continue; fi
 	libraryDirectory="$rootDirectory/libraries/$library"
 	git add -f "$libraryDirectory/dist"
 done
