@@ -95,6 +95,41 @@ class App {
       const itemName = this.currentItem.name;
       this.onCreate(itemName, this.itemsByName[itemName].cost);
     });
+
+    if (this.perfMode) {
+      this.waves = [
+        { time: 0, enemies: 0 },
+        { time: 0, enemies: 500 }
+      ];
+    } else {
+      this.waves = [
+        { time: 0, enemies: 0 },
+        { time: 10, enemies: 5 },
+        { time: 30, enemies: 10 },
+        { time: 60, enemies: 20 },
+        { time: 90, enemies: 50 },
+        { time: 120, enemies: 100 }
+      ];
+    }
+    this.nextWaveIndex = 0;
+  }
+
+  getCurrentWave(elapsed) {
+    const nextWave = this.waves[this.nextWaveIndex];
+
+    const nextWaveTime = nextWave && nextWave.time;
+
+    if (nextWave) {
+      this.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
+    } else {
+      this.ui.info.textContent = "Final Wave!";
+    }
+
+    const currentWave = this.waves[this.nextWaveIndex - 1];
+    if (elapsed < nextWaveTime) return currentWave;
+
+    this.nextWaveIndex++;
+    return nextWave;
   }
 
   updatePlaceholder(showPlaceholder, x, z) {

@@ -258,43 +258,24 @@ class VehicleSystem extends System {
 class EnemyWaveSystem extends System {
   constructor(entities) {
     super(entities);
-    if (APP.perfMode) {
-      this.waves = [{ time: 0, enemies: 500 }];
-    } else {
-      this.waves = [
-        { time: 10, enemies: 5 },
-        { time: 30, enemies: 10 },
-        { time: 60, enemies: 20 },
-        { time: 90, enemies: 50 },
-        { time: 120, enemies: 100 }
-      ];
-    }
-    this.nextWaveIndex = 0;
-    this.nextWave = this.waves[0];
+    this.currentWave = APP.waves[0];
   }
   update(delta, elapsed) {
-    this.nextWave = this.waves[this.nextWaveIndex];
-    if (!this.nextWave) {
-      APP.ui.info.textContent = "Final Wave!";
-      return;
-    }
-    const nextWaveTime = this.nextWave.time;
-    APP.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
-    if (elapsed < nextWaveTime) return;
+    const currentWave = APP.getCurrentWave(elapsed);
+    if (currentWave === this.currentWave) return;
+    this.currentWave = currentWave;
+    this.generateWave(currentWave);
+  }
+  generateWave(wave) {
+    if (!wave) return;
     const occupied = {};
-    for (let i = 0; i < this.nextWave.enemies; i++) {
+    for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
       const lane = THREE.Math.randInt(-2, 2);
       enemy.mesh.mesh.position.x = lane;
-      if (occupied[lane] === undefined) {
-        occupied[lane] = 0;
-      } else {
-        occupied[lane] -= 2;
-        enemy.mesh.mesh.position.z = occupied[lane];
-      }
-      enemy.mesh.mesh.position.z -= 5;
+      occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
+      enemy.mesh.mesh.position.z = occupied[lane] - 5;
     }
-    this.nextWaveIndex++;
   }
 }
 
@@ -309,7 +290,7 @@ class GameOverSystem extends System {
   }
   update() {
     const entities = this.entities.queryTag("enemy");
-    if (!entities.length && !this.enemyWaveSystem.nextWave) {
+    if (!entities.length && !this.enemyWaveSystem.currentWave) {
       APP.playing = false;
       APP.ui.info.textContent = "You Win!";
       return;

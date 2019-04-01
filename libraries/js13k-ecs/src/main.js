@@ -249,45 +249,26 @@ class VehicleSystem {
 
 class EnemyWaveSystem {
   constructor() {
-    if (APP.perfMode) {
-      this.waves = [{ time: 0, enemies: 500 }];
-    } else {
-      this.waves = [
-        { time: 10, enemies: 5 },
-        { time: 30, enemies: 10 },
-        { time: 60, enemies: 20 },
-        { time: 90, enemies: 50 },
-        { time: 120, enemies: 100 }
-      ];
-    }
-    this.nextWaveIndex = 0;
-    this.nextWave = this.waves[0];
     this.elapsed = 0;
+    this.currentWave = APP.waves[0];
   }
   update(delta) {
     this.elapsed += delta;
-    this.nextWave = this.waves[this.nextWaveIndex];
-    if (!this.nextWave) {
-      APP.ui.info.textContent = "Final Wave!";
-      return;
-    }
-    const nextWaveTime = this.nextWave.time;
-    APP.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - this.elapsed).toFixed(1)}`;
-    if (this.elapsed < nextWaveTime) return;
+    const currentWave = APP.getCurrentWave(this.elapsed);
+    if (currentWave === this.currentWave) return;
+    this.currentWave = currentWave;
+    this.generateWave(currentWave);
+  }
+  generateWave(wave) {
+    if (!wave) return;
     const occupied = {};
-    for (let i = 0; i < this.nextWave.enemies; i++) {
+    for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
       const lane = THREE.Math.randInt(-2, 2);
       enemy.get(Mesh).mesh.position.x = lane;
-      if (occupied[lane] === undefined) {
-        occupied[lane] = 0;
-      } else {
-        occupied[lane] -= 2;
-        enemy.get(Mesh).mesh.position.z = occupied[lane];
-      }
-      enemy.get(Mesh).mesh.position.z -= 5;
+      occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
+      enemy.get(Mesh).mesh.position.z = occupied[lane] - 5;
     }
-    this.nextWaveIndex++;
   }
 }
 
@@ -301,7 +282,7 @@ class GameOverSystem {
   }
   update() {
     const entities = ecs.select(Enemy);
-    if (!entities.length && !this.enemyWaveSystem.nextWave) {
+    if (!entities.length && !this.enemyWaveSystem.currentWave) {
       APP.playing = false;
       APP.ui.info.textContent = "You Win!";
       return;
@@ -370,6 +351,7 @@ function createMine() {
 function createProjectile() {
   const entity = ecs.create();
   const mesh = APP.createBox("red", 0.2);
+  entity.add(new Projectile());
   entity.add(new Mesh(mesh));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
   entity.add(new Explosive(Enemy));
