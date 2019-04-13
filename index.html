@@ -34,15 +34,29 @@
       li {
         list-style-type: none;
         display: flex;
-        padding: 0.2em 0;
+        padding: 0.4em 0;
         align-items: center;
       }
       a {
         text-decoration: none;
       }
+      .info-link {
+        margin-left: 0.4em;
+      }
+      .info-link.code {
+        width: 24px;
+        height: 24px;
+        font-weight: bold;
+        margin-top: -1px;
+        font-family: monospace;
+        font-size: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
       li a:first-child {
         display: inline-block;
-        width: 12em;
+        width: 8em;
       }
       h1 {
         font-size: 18pt;
@@ -119,7 +133,7 @@
           <a class="info-link" href="libraries/${name}/index.html?perf" onclick="hideSidebar()" target="viewer">
             ${sicon('stopwatch')}
           </i></a>
-          <a class="info-link" href="${codeUrl}" target="_blank" rel="noopener">${sicon('code')}</a>
+          <a class="info-link code" href="${codeUrl}" target="_blank" rel="noopener">{}</a>
           <a class="info-link" href="${githubUrl}" target="_blank" rel="noopener">${bicon('github')}</a>
           <a class="info-link" href="${npmUrl}" target="_blank" rel="noopener">${bicon('npm')}</a>
         `;
