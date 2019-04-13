@@ -60,13 +60,10 @@ class App {
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
     document.addEventListener("mouseup", this._createItem.bind(this));
-    document.addEventListener("touchend", ({changedTouches}) => this._createItem(changedTouches[0]));
+    document.addEventListener("touchend", ({ changedTouches }) => this._createItem(changedTouches[0]));
 
     if (this.perfMode) {
-      this.waves = [
-        { time: 0, enemies: 0 },
-        { time: 0, enemies: 500 }
-      ];
+      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 500 }];
     } else {
       this.waves = [
         { time: 0, enemies: 0 },
@@ -136,7 +133,7 @@ class App {
       box.copy(collider);
       box.min.applyMatrix4(tempMatrix);
       box.max.applyMatrix4(tempMatrix);
-    }
+    };
   })();
 
   updatePower(power) {

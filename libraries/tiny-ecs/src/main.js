@@ -205,7 +205,7 @@ class PlacementSystem extends System {
     };
   }
   update() {
-      this.updatePlacement();
+    this.updatePlacement();
   }
   updatePlacement() {
     const intersection = APP.getIntersection();
