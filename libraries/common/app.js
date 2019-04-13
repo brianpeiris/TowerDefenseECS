@@ -11,6 +11,7 @@ class App {
     this.scene.add(new THREE.AmbientLight());
 
     this._renderer = new THREE.WebGLRenderer({ antialias: true });
+    this._renderer.setPixelRatio(window.devicePixelRatio);
     document.body.append(this._renderer.domElement);
     this.camera = new THREE.PerspectiveCamera();
     this.camera.position.set(15, 15, 15);
