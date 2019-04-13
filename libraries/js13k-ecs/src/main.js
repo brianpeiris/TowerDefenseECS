@@ -89,7 +89,6 @@ class VelocitySystem {
 
 class CollisionSystem {
   constructor() {
-    this.tempMatrix = new THREE.Matrix4();
     this.tempBox1 = new THREE.Box3();
     this.tempBox2 = new THREE.Box3();
   }
@@ -103,22 +102,16 @@ class CollisionSystem {
     while (e1n) {
       const e1 = e1n.entity;
       const e1c = e1.get(Collider);
-      const e1m = e1.get(Mesh);
-      e1m.mesh.updateMatrixWorld();
-      this.tempMatrix.copyPosition(e1m.mesh.matrixWorld);
-      this.tempBox1.copy(e1c.collider);
-      this.tempBox1.min.applyMatrix4(this.tempMatrix);
-      this.tempBox1.max.applyMatrix4(this.tempMatrix);
+      const e1m = e1.get(Mesh).mesh;
+      e1m.updateMatrixWorld();
+      APP.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
       let e2n = e1n.next;
       while (e2n) {
         const e2 = e2n.entity;
         const e2c = e2.get(Collider);
-        const e2m = e2.get(Mesh);
-        e2m.mesh.updateMatrixWorld();
-        this.tempMatrix.copyPosition(e2m.mesh.matrixWorld);
-        this.tempBox2.copy(e2c.collider);
-        this.tempBox2.min.applyMatrix4(this.tempMatrix);
-        this.tempBox2.max.applyMatrix4(this.tempMatrix);
+        const e2m = e2.get(Mesh).mesh;
+        e2m.updateMatrixWorld();
+        APP.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
         if (this.tempBox1.intersectsBox(this.tempBox2)) {
           e1c.collided = e2;
           e2c.collided = e1;
@@ -280,8 +273,7 @@ class EnemyWaveSystem {
 class GameOverSystem {
   constructor(enemyWaveSystem) {
     this.enemyWaveSystem = enemyWaveSystem;
-    this.tempMatrix = new THREE.Matrix4();
-    this.tempBox1 = new THREE.Box3();
+    this.tempBox = new THREE.Box3();
     this.collider = new THREE.Box3();
     this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
   }
@@ -294,11 +286,8 @@ class GameOverSystem {
     let node = entities.list;
     while (node) {
       const { entity } = node;
-      this.tempMatrix.copyPosition(entity.get(Mesh).mesh.matrixWorld);
-      this.tempBox1.copy(entity.get(Collider).collider);
-      this.tempBox1.min.applyMatrix4(this.tempMatrix);
-      this.tempBox1.max.applyMatrix4(this.tempMatrix);
-      if (this.tempBox1.intersectsBox(this.collider)) {
+      APP.updateBox(this.tempBox, entity.get(Collider).collider, entity.get(Mesh).mesh.matrixWorld);
+      if (this.tempBox.intersectsBox(this.collider)) {
         APP.stopPlaying("Game Over");
         break;
       }

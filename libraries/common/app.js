@@ -129,6 +129,16 @@ class App {
     }
   }
 
+  updateBox = (() => {
+    const tempMatrix = new THREE.Matrix4();
+    return (box, collider, matrix) => {
+      tempMatrix.copyPosition(matrix);
+      box.copy(collider);
+      box.min.applyMatrix4(tempMatrix);
+      box.max.applyMatrix4(tempMatrix);
+    }
+  })();
+
   updatePower(power) {
     this.ui.power.textContent = power.toFixed();
     for (const item of this.items) {
