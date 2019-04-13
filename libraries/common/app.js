@@ -20,20 +20,7 @@ class App {
     this._setSize();
     window.addEventListener("resize", this._setSize.bind(this));
 
-    const stats = new Stats();
-    stats.showPanel(1);
-    stats.dom.style.left = "auto";
-    stats.dom.style.right = 0;
-    document.body.append(stats.dom);
-    const clock = new THREE.Clock();
-    this.playing = true;
-    this._renderer.setAnimationLoop(() => {
-      if (!this.playing) return;
-      stats.begin();
-      update(clock.getDelta(), clock.elapsedTime);
-      this._renderer.render(this.scene, this.camera);
-      stats.end();
-    });
+    this._addStatsPanel(update);
 
     this.ui = {
       info: document.getElementById("info"),
@@ -54,28 +41,7 @@ class App {
       { name: "collector", cost: 150 }
     ];
     this.itemsByName = {};
-    const itemTemplate = document.getElementById("itemTemplate");
-    for (const item of this.items) {
-      const { name, cost } = item;
-      this.itemsByName[name] = item;
-      const itemEl = document.importNode(itemTemplate.content, true);
-
-      const input = itemEl.querySelector("input");
-      item.input = input;
-      input.id = name;
-      input.value = name;
-      input.addEventListener("change", () => {
-        if (input.checked) this.currentItem = item;
-      });
-
-      const label = itemEl.querySelector("label");
-      label.setAttribute("for", name);
-      label.textContent = `${name}\n${cost}`;
-      label.addEventListener("mousedown", this._selectItem.bind(this, input, item));
-      label.addEventListener("touchstart", this._selectItem.bind(this, input, item));
-      label.addEventListener("touchend", e => e.stopPropagation());
-      this.ui.itemSelection.append(itemEl);
-    }
+    this._generateItemsUI();
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
 
@@ -93,8 +59,8 @@ class App {
     this.placeholder.visible = this.device.supportsHover;
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
-    document.addEventListener("mouseup", this.createItem.bind(this));
-    document.addEventListener("touchend", ({changedTouches}) => this.createItem(changedTouches[0]));
+    document.addEventListener("mouseup", this._createItem.bind(this));
+    document.addEventListener("touchend", ({changedTouches}) => this._createItem(changedTouches[0]));
 
     if (this.perfMode) {
       this.waves = [
@@ -112,14 +78,6 @@ class App {
       ];
     }
     this.nextWaveIndex = 0;
-  }
-
-  createItem(e) {
-    if (!this.mouse) this.mouse = new THREE.Vector2();
-    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-    const itemName = this.currentItem.name;
-    this.onCreate(itemName, this.itemsByName[itemName].cost);
   }
 
   getCurrentWave(elapsed) {
@@ -178,6 +136,19 @@ class App {
     }
   }
 
+  stopPlaying(reason) {
+    this.playing = false;
+    this.ui.info.textContent = reason;
+  }
+
+  _createItem(e) {
+    if (!this.mouse) this.mouse = new THREE.Vector2();
+    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
+    const itemName = this.currentItem.name;
+    this.onCreate(itemName, this.itemsByName[itemName].cost);
+  }
+
   _selectItem(input, item) {
     if (input.disabled) return;
     input.checked = true;
@@ -205,6 +176,48 @@ class App {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+  }
+
+  _addStatsPanel(update) {
+    const stats = new Stats();
+    stats.showPanel(1);
+    stats.dom.style.left = "auto";
+    stats.dom.style.right = 0;
+    document.body.append(stats.dom);
+    const clock = new THREE.Clock();
+    this.playing = true;
+    this._renderer.setAnimationLoop(() => {
+      if (!this.playing) return;
+      stats.begin();
+      update(clock.getDelta(), clock.elapsedTime);
+      this._renderer.render(this.scene, this.camera);
+      stats.end();
+    });
+  }
+
+  _generateItemsUI() {
+    const itemTemplate = document.getElementById("itemTemplate");
+    for (const item of this.items) {
+      const { name, cost } = item;
+      this.itemsByName[name] = item;
+      const itemEl = document.importNode(itemTemplate.content, true);
+
+      const input = itemEl.querySelector("input");
+      item.input = input;
+      input.id = name;
+      input.value = name;
+      input.addEventListener("change", () => {
+        if (input.checked) this.currentItem = item;
+      });
+
+      const label = itemEl.querySelector("label");
+      label.setAttribute("for", name);
+      label.textContent = `${name}\n${cost}`;
+      label.addEventListener("mousedown", this._selectItem.bind(this, input, item));
+      label.addEventListener("touchstart", this._selectItem.bind(this, input, item));
+      label.addEventListener("touchend", e => e.stopPropagation());
+      this.ui.itemSelection.append(itemEl);
+    }
   }
 }
 module.exports = App;

@@ -288,8 +288,7 @@ class GameOverSystem {
   update() {
     const entities = ecs.select(Enemy);
     if (!entities.length && !this.enemyWaveSystem.currentWave) {
-      APP.playing = false;
-      APP.ui.info.textContent = "You Win!";
+      APP.stopPlaying("You Win!");
       return;
     }
     let node = entities.list;
@@ -300,8 +299,7 @@ class GameOverSystem {
       this.tempBox1.min.applyMatrix4(this.tempMatrix);
       this.tempBox1.max.applyMatrix4(this.tempMatrix);
       if (this.tempBox1.intersectsBox(this.collider)) {
-        APP.playing = false;
-        APP.ui.info.textContent = "Game Over";
+        APP.stopPlaying("Game Over");
         break;
       }
       node = node.next;

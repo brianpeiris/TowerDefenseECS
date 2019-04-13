@@ -296,8 +296,7 @@ class GameOverSystem extends System {
   update() {
     const entities = this.entities.queryTag("enemy");
     if (!entities.length && !this.enemyWaveSystem.currentWave) {
-      APP.playing = false;
-      APP.ui.info.textContent = "You Win!";
+      APP.stopPlaying("You Win!");
       return;
     }
     for (const entity of entities) {
@@ -306,8 +305,7 @@ class GameOverSystem extends System {
       this.tempBox1.min.applyMatrix4(this.tempMatrix);
       this.tempBox1.max.applyMatrix4(this.tempMatrix);
       if (this.tempBox1.intersectsBox(this.collider)) {
-        APP.playing = false;
-        APP.ui.info.textContent = "Game Over";
+        APP.stopPlaying("Game Over");
         break;
       }
     }
