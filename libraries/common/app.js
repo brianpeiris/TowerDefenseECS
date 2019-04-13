@@ -20,19 +20,17 @@ class App {
     this._setSize();
     window.addEventListener("resize", this._setSize.bind(this));
 
-    this._addStatsPanel(update);
+    this.floor = this._createFloor();
+    this.raycaster = new THREE.Raycaster();
+    this.intersections = [];
+    this.mouse = null;
+    document.addEventListener("mousemove", this._updateMouse.bind(this));
 
     this.ui = {
       info: document.getElementById("info"),
       itemSelection: document.getElementById("itemSelection"),
       power: document.getElementById("power")
     };
-
-    this.device = {
-      supportsHover: !window.TouchEvent
-    };
-
-    this.perfMode = location.search.includes("perf");
 
     this.items = [
       { name: "mine", cost: 50 },
@@ -45,23 +43,15 @@ class App {
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
 
-    this.floor = this._createFloor();
-    this.raycaster = new THREE.Raycaster();
-    this.intersections = [];
-    this.mouse = null;
-    document.addEventListener("mousemove", e => {
-      if (!this.mouse) this.mouse = new THREE.Vector2();
-      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-    });
-
+    this.deviceSupportsHover = !window.TouchEvent;
     this.placeholder = this.createBox("darkred", 1);
-    this.placeholder.visible = this.device.supportsHover;
+    this.placeholder.visible = this.deviceSupportsHover;
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
     document.addEventListener("mouseup", this._createItem.bind(this));
     document.addEventListener("touchend", ({ changedTouches }) => this._createItem(changedTouches[0]));
 
+    this.perfMode = location.search.includes("perf");
     if (this.perfMode) {
       this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 500 }];
     } else {
@@ -75,6 +65,8 @@ class App {
       ];
     }
     this.nextWaveIndex = 0;
+
+    this._addStatsPanel(update);
   }
 
   getCurrentWave(elapsed) {
@@ -97,7 +89,7 @@ class App {
 
   updatePlacement(placementValid, x, z) {
     this.placementValid = placementValid;
-    this.placeholder.visible = this.device.supportsHover && placementValid;
+    this.placeholder.visible = this.deviceSupportsHover && placementValid;
     this.placeholder.position.set(x, 0, z);
   }
 
@@ -149,11 +141,15 @@ class App {
   }
 
   _createItem(e) {
+    this._updateMouse(e);
+    const itemName = this.currentItem.name;
+    this.onCreate(itemName, this.itemsByName[itemName].cost);
+  }
+
+  _updateMouse(e) {
     if (!this.mouse) this.mouse = new THREE.Vector2();
     this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-    const itemName = this.currentItem.name;
-    this.onCreate(itemName, this.itemsByName[itemName].cost);
   }
 
   _selectItem(input, item) {
