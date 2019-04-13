@@ -40,16 +40,6 @@
       a {
         text-decoration: none;
       }
-      .supports-hover .info-link {
-        visibility: hidden;
-      }
-      .supports-hover .info-link:hover {
-        visibility: hidden;
-        background: #eee;
-      }
-      .supports-hover li:hover .info-link {
-        visibility: visible;
-      }
       li a:first-child {
         display: inline-block;
         width: 12em;
@@ -136,9 +126,6 @@
         fragment.append(li);
       });
       document.getElementById("list").append(fragment);
-      if (!window.TouchEvent) {
-        document.body.classList.add('supports-hover');
-      }
       function hideSidebar() {
         document.getElementById('sidebar').classList.add('hidden');
         document.getElementById('hamburger').classList.remove('hidden');
