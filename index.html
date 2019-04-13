@@ -117,6 +117,11 @@
         {
           name: "js13k-ecs",
           githubOwner: "kutuluk"
+        },
+        {
+          name: "ensy",
+          githubOwner: "adngdb",
+          githubRepo: "entity-system-js"
         }
       ];
       const fragment = document.createDocumentFragment();
@@ -129,24 +134,24 @@
         const sicon = name => `<i class="fas fa-${name}"></i>`;
         const bicon = name => `<i class="fab fa-${name}"></i>`;
         li.innerHTML = `
-          <a href="libraries/${name}/" target="viewer" onclick="hideSidebar()">${name}</a>
-          <a class="info-link" href="libraries/${name}/index.html?perf" onclick="hideSidebar()" target="viewer">
-            ${sicon('stopwatch')}
+          <a href="libraries/common/library.html?library=${name}" target="viewer" onclick="hideSidebar()">${name}</a>
+          <a class="info-link" href="libraries/common/library.html?library=${name}&perf" onclick="hideSidebar()" target="viewer">
+            ${sicon("stopwatch")}
           </i></a>
           <a class="info-link code" href="${codeUrl}" target="_blank" rel="noopener">{}</a>
-          <a class="info-link" href="${githubUrl}" target="_blank" rel="noopener">${bicon('github')}</a>
-          <a class="info-link" href="${npmUrl}" target="_blank" rel="noopener">${bicon('npm')}</a>
+          <a class="info-link" href="${githubUrl}" target="_blank" rel="noopener">${bicon("github")}</a>
+          <a class="info-link" href="${npmUrl}" target="_blank" rel="noopener">${bicon("npm")}</a>
         `;
         fragment.append(li);
       });
       document.getElementById("list").append(fragment);
       function hideSidebar() {
-        document.getElementById('sidebar').classList.add('hidden');
-        document.getElementById('hamburger').classList.remove('hidden');
+        document.getElementById("sidebar").classList.add("hidden");
+        document.getElementById("hamburger").classList.remove("hidden");
       }
       function showSidebar() {
-        document.getElementById('sidebar').classList.remove('hidden');
-        document.getElementById('hamburger').classList.add('hidden');
+        document.getElementById("sidebar").classList.remove("hidden");
+        document.getElementById("hamburger").classList.add("hidden");
       }
     </script>
   </body>

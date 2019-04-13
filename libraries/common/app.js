@@ -66,7 +66,16 @@ class App {
     }
     this.nextWaveIndex = 0;
 
-    this._addStatsPanel(update);
+    const stats = this._createStatsPanel(update);
+    const clock = new THREE.Clock();
+    this.playing = true;
+    this._renderer.setAnimationLoop(() => {
+      if (!this.playing) return;
+      stats.begin();
+      update(clock.getDelta(), clock.elapsedTime);
+      this._renderer.render(this.scene, this.camera);
+      stats.end();
+    });
   }
 
   getCurrentWave(elapsed) {
@@ -181,21 +190,13 @@ class App {
     this.camera.updateProjectionMatrix();
   }
 
-  _addStatsPanel(update) {
+  _createStatsPanel(update) {
     const stats = new Stats();
     stats.showPanel(1);
     stats.dom.style.left = "auto";
     stats.dom.style.right = 0;
     document.body.append(stats.dom);
-    const clock = new THREE.Clock();
-    this.playing = true;
-    this._renderer.setAnimationLoop(() => {
-      if (!this.playing) return;
-      stats.begin();
-      update(clock.getDelta(), clock.elapsedTime);
-      this._renderer.render(this.scene, this.camera);
-      stats.end();
-    });
+    return stats;
   }
 
   _generateItemsUI() {
