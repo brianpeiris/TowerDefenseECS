@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "ensy": "^1.4.0"
+  }
+}

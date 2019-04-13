@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>TowerDefenseECS | </title>
+    <link href="library.css" rel="stylesheet" />
+  </head>
+  <body>
+    <h1 id="heading"></h1>
+    <div id="info"></div>
+    <template id="itemTemplate">
+      <input name="item" type="radio" id="" value="" checked /><label for=""></label>
+    </template>
+    <form id="itemSelection">
+      <div id="power"></div>
+    </form>
+    <script>
+      const library = new URLSearchParams(location.search).get('library');
+      heading.textContent = library;
+      const script = document.createElement('script');
+      script.src = `/libraries/${library}/dist/main.js`;
+      document.body.append(script);
+    </script>
+  </body>
+</html>

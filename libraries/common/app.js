@@ -11,36 +11,26 @@ class App {
     this.scene.add(new THREE.AmbientLight());
 
     this._renderer = new THREE.WebGLRenderer({ antialias: true });
+    this._renderer.setPixelRatio(window.devicePixelRatio);
     document.body.append(this._renderer.domElement);
     this.camera = new THREE.PerspectiveCamera();
-    this.camera.position.set(10, 10, 10);
-    this.camera.lookAt(this.scene.position);
+    this.camera.position.set(15, 15, 15);
+    this.camera.lookAt(new THREE.Vector3(0, 5, 0));
 
     this._setSize();
     window.addEventListener("resize", this._setSize.bind(this));
 
-    const stats = new Stats();
-    stats.showPanel(1);
-    stats.dom.style.left = "auto";
-    stats.dom.style.right = 0;
-    document.body.append(stats.dom);
-    const clock = new THREE.Clock();
-    this.playing = true;
-    this._renderer.setAnimationLoop(() => {
-      if (!this.playing) return;
-      stats.begin();
-      update(clock.getDelta(), clock.elapsedTime);
-      this._renderer.render(this.scene, this.camera);
-      stats.end();
-    });
+    this.floor = this._createFloor();
+    this.raycaster = new THREE.Raycaster();
+    this.intersections = [];
+    this.mouse = null;
+    document.addEventListener("mousemove", this._updateMouse.bind(this));
 
     this.ui = {
       info: document.getElementById("info"),
       itemSelection: document.getElementById("itemSelection"),
       power: document.getElementById("power")
     };
-
-    this.perfMode = location.search.includes("perf");
 
     this.items = [
       { name: "mine", cost: 50 },
@@ -49,58 +39,21 @@ class App {
       { name: "collector", cost: 150 }
     ];
     this.itemsByName = {};
-    const itemTemplate = document.getElementById("itemTemplate");
-    for (const item of this.items) {
-      const { name, cost } = item;
-      this.itemsByName[name] = item;
-      const itemEl = document.importNode(itemTemplate.content, true);
-
-      const input = itemEl.querySelector("input");
-      item.input = input;
-      input.id = name;
-      input.value = name;
-      input.addEventListener("change", () => {
-        if (input.checked) this.currentItem = item;
-      });
-
-      const label = itemEl.querySelector("label");
-      label.setAttribute("for", name);
-      label.textContent = `${name}\n${cost}`;
-      label.addEventListener("mousedown", () => {
-        if (input.disabled) return;
-        input.checked = true;
-        this.currentItem = item;
-      });
-      this.ui.itemSelection.append(itemEl);
-    }
+    this._generateItemsUI();
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
 
-    this.floor = this._createFloor();
-    this.raycaster = new THREE.Raycaster();
-    this.intersections = [];
-    this.mouse = null;
-    document.addEventListener("mousemove", e => {
-      if (!this.mouse) this.mouse = new THREE.Vector2();
-      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-    });
-
+    this.deviceSupportsHover = !window.TouchEvent;
     this.placeholder = this.createBox("darkred", 1);
-    this.placeholder.visible = false;
+    this.placeholder.visible = this.deviceSupportsHover;
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
-    document.addEventListener("click", () => {
-      if (!this.placeholder.visible) return;
-      const itemName = this.currentItem.name;
-      this.onCreate(itemName, this.itemsByName[itemName].cost);
-    });
+    document.addEventListener("mouseup", this._createItem.bind(this));
+    document.addEventListener("touchend", ({ changedTouches }) => this._createItem(changedTouches[0]));
 
+    this.perfMode = location.search.includes("perf");
     if (this.perfMode) {
-      this.waves = [
-        { time: 0, enemies: 0 },
-        { time: 0, enemies: 500 }
-      ];
+      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 500 }];
     } else {
       this.waves = [
         { time: 0, enemies: 0 },
@@ -112,6 +65,17 @@ class App {
       ];
     }
     this.nextWaveIndex = 0;
+
+    const stats = this._createStatsPanel(update);
+    const clock = new THREE.Clock();
+    this.playing = true;
+    this._renderer.setAnimationLoop(() => {
+      if (!this.playing) return;
+      stats.begin();
+      update(clock.getDelta(), clock.elapsedTime);
+      this._renderer.render(this.scene, this.camera);
+      stats.end();
+    });
   }
 
   getCurrentWave(elapsed) {
@@ -132,8 +96,9 @@ class App {
     return nextWave;
   }
 
-  updatePlaceholder(showPlaceholder, x, z) {
-    this.placeholder.visible = showPlaceholder;
+  updatePlacement(placementValid, x, z) {
+    this.placementValid = placementValid;
+    this.placeholder.visible = this.deviceSupportsHover && placementValid;
     this.placeholder.position.set(x, 0, z);
   }
 
@@ -162,11 +127,44 @@ class App {
     }
   }
 
+  updateBox = (() => {
+    const tempMatrix = new THREE.Matrix4();
+    return (box, collider, matrix) => {
+      tempMatrix.copyPosition(matrix);
+      box.copy(collider);
+      box.min.applyMatrix4(tempMatrix);
+      box.max.applyMatrix4(tempMatrix);
+    };
+  })();
+
   updatePower(power) {
     this.ui.power.textContent = power.toFixed();
     for (const item of this.items) {
       item.input.disabled = power < item.cost;
     }
+  }
+
+  stopPlaying(reason) {
+    this.playing = false;
+    this.ui.info.textContent = reason;
+  }
+
+  _createItem(e) {
+    this._updateMouse(e);
+    const itemName = this.currentItem.name;
+    this.onCreate(itemName, this.itemsByName[itemName].cost);
+  }
+
+  _updateMouse(e) {
+    if (!this.mouse) this.mouse = new THREE.Vector2();
+    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
+  }
+
+  _selectItem(input, item) {
+    if (input.disabled) return;
+    input.checked = true;
+    this.currentItem = item;
   }
 
   _createFloor() {
@@ -190,6 +188,40 @@ class App {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+  }
+
+  _createStatsPanel(update) {
+    const stats = new Stats();
+    stats.showPanel(1);
+    stats.dom.style.left = "auto";
+    stats.dom.style.right = 0;
+    document.body.append(stats.dom);
+    return stats;
+  }
+
+  _generateItemsUI() {
+    const itemTemplate = document.getElementById("itemTemplate");
+    for (const item of this.items) {
+      const { name, cost } = item;
+      this.itemsByName[name] = item;
+      const itemEl = document.importNode(itemTemplate.content, true);
+
+      const input = itemEl.querySelector("input");
+      item.input = input;
+      input.id = name;
+      input.value = name;
+      input.addEventListener("change", () => {
+        if (input.checked) this.currentItem = item;
+      });
+
+      const label = itemEl.querySelector("label");
+      label.setAttribute("for", name);
+      label.textContent = `${name}\n${cost}`;
+      label.addEventListener("mousedown", this._selectItem.bind(this, input, item));
+      label.addEventListener("touchstart", this._selectItem.bind(this, input, item));
+      label.addEventListener("touchend", e => e.stopPropagation());
+      this.ui.itemSelection.append(itemEl);
+    }
   }
 }
 module.exports = App;

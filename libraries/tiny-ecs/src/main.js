@@ -98,7 +98,6 @@ class VelocitySystem extends System {
 class CollisionSystem extends System {
   constructor(entities) {
     super(entities);
-    this.tempMatrix = new THREE.Matrix4();
     this.tempBox1 = new THREE.Box3();
     this.tempBox2 = new THREE.Box3();
   }
@@ -110,19 +109,15 @@ class CollisionSystem extends System {
     for (let i = 0; i < entities.length; i++) {
       const e1 = entities[i];
       const e1c = e1.collider;
-      e1.mesh.mesh.updateMatrixWorld();
-      this.tempMatrix.copyPosition(e1.mesh.mesh.matrixWorld);
-      this.tempBox1.copy(e1c.collider);
-      this.tempBox1.min.applyMatrix4(this.tempMatrix);
-      this.tempBox1.max.applyMatrix4(this.tempMatrix);
+      const e1m = e1.mesh.mesh;
+      e1m.updateMatrixWorld();
+      APP.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
       for (let j = i + 1; j < entities.length; j++) {
         const e2 = entities[j];
         const e2c = e2.collider;
-        e2.mesh.mesh.updateMatrixWorld();
-        this.tempMatrix.copyPosition(e2.mesh.mesh.matrixWorld);
-        this.tempBox2.copy(e2c.collider);
-        this.tempBox2.min.applyMatrix4(this.tempMatrix);
-        this.tempBox2.max.applyMatrix4(this.tempMatrix);
+        const e2m = e2.mesh.mesh;
+        e2m.updateMatrixWorld();
+        APP.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
         if (!this.tempBox1.intersectsBox(this.tempBox2)) continue;
         e1c.collided = e2;
         e2c.collided = e1;
@@ -202,28 +197,33 @@ class PlacementSystem extends System {
       collector: createCollector
     };
     APP.onCreate = (itemName, cost) => {
+      this.updatePlacement();
+      if (!APP.placementValid) return;
       let item = this.factories[itemName]();
       this.resourceSystem.power -= cost;
       item.mesh.mesh.position.copy(APP.placeholder.position);
     };
   }
   update() {
+    this.updatePlacement();
+  }
+  updatePlacement() {
     const intersection = APP.getIntersection();
     if (!intersection) {
-      APP.updatePlaceholder(false);
+      APP.updatePlacement(false);
       return;
     }
     const entities = this.entities.queryComponents([Mesh]);
     const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
-    let showPlaceholder = !APP.currentItem.input.disabled;
+    let placementValid = !APP.currentItem.input.disabled;
     for (const entity of entities) {
       entity.mesh.mesh.getWorldPosition(this.worldPosition);
       const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
       if (!entity.hasTag("projectile") && x === ex && z === ez) {
-        showPlaceholder = false;
+        placementValid = false;
       }
     }
-    APP.updatePlaceholder(showPlaceholder, x, z);
+    APP.updatePlacement(placementValid, x, z);
   }
 }
 
@@ -283,26 +283,20 @@ class GameOverSystem extends System {
   constructor(entities, enemyWaveSystem) {
     super(entities);
     this.enemyWaveSystem = enemyWaveSystem;
-    this.tempMatrix = new THREE.Matrix4();
-    this.tempBox1 = new THREE.Box3();
+    this.tempBox = new THREE.Box3();
     this.collider = new THREE.Box3();
     this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
   }
   update() {
     const entities = this.entities.queryTag("enemy");
     if (!entities.length && !this.enemyWaveSystem.currentWave) {
-      APP.playing = false;
-      APP.ui.info.textContent = "You Win!";
+      APP.stopPlaying("You Win!");
       return;
     }
     for (const entity of entities) {
-      this.tempMatrix.copyPosition(entity.mesh.mesh.matrixWorld);
-      this.tempBox1.copy(entity.collider.collider);
-      this.tempBox1.min.applyMatrix4(this.tempMatrix);
-      this.tempBox1.max.applyMatrix4(this.tempMatrix);
-      if (this.tempBox1.intersectsBox(this.collider)) {
-        APP.playing = false;
-        APP.ui.info.textContent = "Game Over";
+      APP.updateBox(this.tempBox, entity.collider.collider, entity.mesh.mesh.matrixWorld);
+      if (this.tempBox.intersectsBox(this.collider)) {
+        APP.stopPlaying("Game Over");
         break;
       }
     }
@@ -373,9 +367,13 @@ function createProjectile() {
   return entity;
 }
 
-function createTurret(withCollider = true) {
+function createTurret(withCollider = true, firingRate) {
   const entity = entities.createEntity();
   entity.addComponent(Turret);
+  if (firingRate) {
+    entity.turret.firingRate = firingRate;
+    entity.turret.timeUntilFire = 1 / firingRate;
+  }
   entity.addComponent(Mesh);
   entity.mesh.mesh = APP.createBox("blue");
   if (withCollider) {
@@ -393,8 +391,7 @@ function createTurretVehicle() {
   entity.mesh.mesh = APP.createBox("yellow", 0.9);
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  const turret = createTurret(false);
-  turret.firingRate = 1;
+  const turret = createTurret(false, 1);
   turret.mesh.mesh.position.y = 0.5;
   entity.mesh.mesh.add(turret.mesh.mesh);
   entity.vehicle.onboard = turret;
