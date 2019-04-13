@@ -202,28 +202,33 @@ class PlacementSystem extends System {
       collector: createCollector
     };
     APP.onCreate = (itemName, cost) => {
+      this.updatePlacement();
+      if (!APP.placementValid) return;
       let item = this.factories[itemName]();
       this.resourceSystem.power -= cost;
       item.mesh.mesh.position.copy(APP.placeholder.position);
     };
   }
   update() {
+      this.updatePlacement();
+  }
+  updatePlacement() {
     const intersection = APP.getIntersection();
     if (!intersection) {
-      APP.updatePlaceholder(false);
+      APP.updatePlacement(false);
       return;
     }
     const entities = this.entities.queryComponents([Mesh]);
     const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
-    let showPlaceholder = !APP.currentItem.input.disabled;
+    let placementValid = !APP.currentItem.input.disabled;
     for (const entity of entities) {
       entity.mesh.mesh.getWorldPosition(this.worldPosition);
       const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
       if (!entity.hasTag("projectile") && x === ex && z === ez) {
-        showPlaceholder = false;
+        placementValid = false;
       }
     }
-    APP.updatePlaceholder(showPlaceholder, x, z);
+    APP.updatePlacement(placementValid, x, z);
   }
 }
 
@@ -373,9 +378,13 @@ function createProjectile() {
   return entity;
 }
 
-function createTurret(withCollider = true) {
+function createTurret(withCollider = true, firingRate) {
   const entity = entities.createEntity();
   entity.addComponent(Turret);
+  if (firingRate) {
+    entity.turret.firingRate = firingRate;
+    entity.turret.timeUntilFire = 1 / firingRate;
+  }
   entity.addComponent(Mesh);
   entity.mesh.mesh = APP.createBox("blue");
   if (withCollider) {
@@ -393,8 +402,7 @@ function createTurretVehicle() {
   entity.mesh.mesh = APP.createBox("yellow", 0.9);
   entity.addComponent(Collider);
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  const turret = createTurret(false);
-  turret.firingRate = 1;
+  const turret = createTurret(false, 1);
   turret.mesh.mesh.position.y = 0.5;
   entity.mesh.mesh.add(turret.mesh.mesh);
   entity.vehicle.onboard = turret;

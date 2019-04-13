@@ -40,14 +40,14 @@
       a {
         text-decoration: none;
       }
-      .info-link {
+      .supports-hover .info-link {
         visibility: hidden;
       }
-      .info-link:hover {
+      .supports-hover .info-link:hover {
         visibility: hidden;
         background: #eee;
       }
-      li:hover .info-link {
+      .supports-hover li:hover .info-link {
         visibility: visible;
       }
       li a:first-child {
@@ -71,11 +71,35 @@
         justify-content: center;
         align-items: center;
       }
+      #sidebar.hidden { display: none; }
+      #hamburger.hidden { display: none; }
+      #hamburger { 
+        position: absolute;
+        margin-left: 1em;
+        width: 65px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 1.5em;
+      }
+      .patty {
+        width: 30px;
+        height: 2px;
+        background: white;
+        border: 1px solid white;
+        margin: 3px;
+        border-radius: 4px;
+      }
     </style>
   </head>
   <body>
     <template id=""> </template>
-    <div>
+    <div id="hamburger" onclick="showSidebar()" class="hidden">
+      <div class="patty"></div>
+      <div class="patty"></div>
+      <div class="patty"></div>
+    </div>
+    <div id="sidebar">
       <a href="/"><h1>TowerDefenseECS<br /><span>TodoMVC for ECS libraries</span></h1></a>
       <ol id="list"></ol>
     </div>
@@ -101,15 +125,28 @@
         const sicon = name => `<i class="fas fa-${name}"></i>`;
         const bicon = name => `<i class="fab fa-${name}"></i>`;
         li.innerHTML = `
-          <a href="libraries/${name}/" target="viewer">${name}</a>
-          <a class="info-link" href="libraries/${name}/index.html?perf" target="viewer">${sicon('stopwatch')}</i></a>
+          <a href="libraries/${name}/" target="viewer" onclick="hideSidebar()">${name}</a>
+          <a class="info-link" href="libraries/${name}/index.html?perf" onclick="hideSidebar()" target="viewer">
+            ${sicon('stopwatch')}
+          </i></a>
           <a class="info-link" href="${codeUrl}" target="_blank" rel="noopener">${sicon('code')}</a>
           <a class="info-link" href="${githubUrl}" target="_blank" rel="noopener">${bicon('github')}</a>
           <a class="info-link" href="${npmUrl}" target="_blank" rel="noopener">${bicon('npm')}</a>
-				`;
+        `;
         fragment.append(li);
       });
       document.getElementById("list").append(fragment);
+      if (!window.TouchEvent) {
+        document.body.classList.add('supports-hover');
+      }
+      function hideSidebar() {
+        document.getElementById('sidebar').classList.add('hidden');
+        document.getElementById('hamburger').classList.remove('hidden');
+      }
+      function showSidebar() {
+        document.getElementById('sidebar').classList.remove('hidden');
+        document.getElementById('hamburger').classList.add('hidden');
+      }
     </script>
   </body>
 </html>

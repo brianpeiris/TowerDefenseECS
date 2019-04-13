@@ -13,8 +13,8 @@ class App {
     this._renderer = new THREE.WebGLRenderer({ antialias: true });
     document.body.append(this._renderer.domElement);
     this.camera = new THREE.PerspectiveCamera();
-    this.camera.position.set(10, 10, 10);
-    this.camera.lookAt(this.scene.position);
+    this.camera.position.set(15, 15, 15);
+    this.camera.lookAt(new THREE.Vector3(0, 5, 0));
 
     this._setSize();
     window.addEventListener("resize", this._setSize.bind(this));
@@ -38,6 +38,10 @@ class App {
       info: document.getElementById("info"),
       itemSelection: document.getElementById("itemSelection"),
       power: document.getElementById("power")
+    };
+
+    this.device = {
+      supportsHover: !window.TouchEvent
     };
 
     this.perfMode = location.search.includes("perf");
@@ -66,11 +70,9 @@ class App {
       const label = itemEl.querySelector("label");
       label.setAttribute("for", name);
       label.textContent = `${name}\n${cost}`;
-      label.addEventListener("mousedown", () => {
-        if (input.disabled) return;
-        input.checked = true;
-        this.currentItem = item;
-      });
+      label.addEventListener("mousedown", this._selectItem.bind(this, input, item));
+      label.addEventListener("touchstart", this._selectItem.bind(this, input, item));
+      label.addEventListener("touchend", e => e.stopPropagation());
       this.ui.itemSelection.append(itemEl);
     }
     this.items[0].input.checked = true;
@@ -87,14 +89,11 @@ class App {
     });
 
     this.placeholder = this.createBox("darkred", 1);
-    this.placeholder.visible = false;
+    this.placeholder.visible = this.device.supportsHover;
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
-    document.addEventListener("click", () => {
-      if (!this.placeholder.visible) return;
-      const itemName = this.currentItem.name;
-      this.onCreate(itemName, this.itemsByName[itemName].cost);
-    });
+    document.addEventListener("mouseup", this.createItem.bind(this));
+    document.addEventListener("touchend", ({changedTouches}) => this.createItem(changedTouches[0]));
 
     if (this.perfMode) {
       this.waves = [
@@ -112,6 +111,14 @@ class App {
       ];
     }
     this.nextWaveIndex = 0;
+  }
+
+  createItem(e) {
+    if (!this.mouse) this.mouse = new THREE.Vector2();
+    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
+    const itemName = this.currentItem.name;
+    this.onCreate(itemName, this.itemsByName[itemName].cost);
   }
 
   getCurrentWave(elapsed) {
@@ -132,8 +139,9 @@ class App {
     return nextWave;
   }
 
-  updatePlaceholder(showPlaceholder, x, z) {
-    this.placeholder.visible = showPlaceholder;
+  updatePlacement(placementValid, x, z) {
+    this.placementValid = placementValid;
+    this.placeholder.visible = this.device.supportsHover && placementValid;
     this.placeholder.position.set(x, 0, z);
   }
 
@@ -167,6 +175,12 @@ class App {
     for (const item of this.items) {
       item.input.disabled = power < item.cost;
     }
+  }
+
+  _selectItem(input, item) {
+    if (input.disabled) return;
+    input.checked = true;
+    this.currentItem = item;
   }
 
   _createFloor() {
