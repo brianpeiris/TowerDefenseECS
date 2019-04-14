@@ -24,6 +24,9 @@ class App {
     this.raycaster = new THREE.Raycaster();
     this.intersections = [];
     this.mouse = null;
+    document.addEventListener("touchstart", () => {
+      this.deviceSupportsHover = false;
+    });
     document.addEventListener("mousemove", this._updateMouse.bind(this));
 
     this.ui = {
@@ -43,7 +46,7 @@ class App {
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
 
-    this.deviceSupportsHover = !window.TouchEvent;
+    this.deviceSupportsHover = true;
     this.placeholder = this.createBox("darkred", 1);
     this.placeholder.visible = this.deviceSupportsHover;
     this.scene.add(this.placeholder);
@@ -190,7 +193,7 @@ class App {
     this.camera.updateProjectionMatrix();
   }
 
-  _createStatsPanel(update) {
+  _createStatsPanel() {
     const stats = new Stats();
     stats.showPanel(1);
     stats.dom.style.left = "auto";
