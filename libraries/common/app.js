@@ -48,7 +48,7 @@ class App {
 
     this.deviceSupportsHover = true;
     this.placeholder = this.createBox("darkred", 1);
-    this.placeholder.visible = this.deviceSupportsHover;
+    this.placeholder.visible = false;
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
     document.addEventListener("mouseup", this._createItem.bind(this));
@@ -72,10 +72,13 @@ class App {
     const stats = this._createStatsPanel(update);
     const clock = new THREE.Clock();
     this.playing = true;
+    this.delta = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this.playing) return;
       stats.begin();
-      update(clock.getDelta(), clock.elapsedTime);
+      this.delta = clock.getDelta();
+      this.elapsed = clock.elapsedTime;
+      update(this.delta, this.elapsed);
       this._renderer.render(this.scene, this.camera);
       stats.end();
     });

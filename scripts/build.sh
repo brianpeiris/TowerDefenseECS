@@ -9,5 +9,5 @@ cd "$rootDirectory";
 for library in $(ls libraries); do
 	if [[ $library == "common" ]]; then continue; fi
 	libraryDirectory="$rootDirectory/libraries/$library"
-	npx webpack "$libraryDirectory/src/main.js" -o "$libraryDirectory/dist/main.js" --mode production
+	NODE_ENV=production npx webpack "$libraryDirectory/src/main.js" -o "$libraryDirectory/dist/main.js" --mode production
 done
