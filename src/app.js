@@ -1,4 +1,4 @@
-const Stats = require("stats.js");
+const rStats = require("rstatsjs/src/rStats.js");
 const THREE = require("three");
 
 class App {
@@ -24,6 +24,9 @@ class App {
     this.raycaster = new THREE.Raycaster();
     this.intersections = [];
     this.mouse = null;
+    document.addEventListener("touchstart", () => {
+      this.deviceSupportsHover = false;
+    });
     document.addEventListener("mousemove", this._updateMouse.bind(this));
 
     this.ui = {
@@ -43,9 +46,9 @@ class App {
     this.items[0].input.checked = true;
     this.currentItem = this.items[0];
 
-    this.deviceSupportsHover = !window.TouchEvent;
+    this.deviceSupportsHover = true;
     this.placeholder = this.createBox("darkred", 1);
-    this.placeholder.visible = this.deviceSupportsHover;
+    this.placeholder.visible = false;
     this.scene.add(this.placeholder);
     this.onCreate = () => {};
     document.addEventListener("mouseup", this._createItem.bind(this));
@@ -66,15 +69,23 @@ class App {
     }
     this.nextWaveIndex = 0;
 
-    const stats = this._createStatsPanel(update);
+    const stats = new rStats({
+      values: {
+        frame: { average: true }
+      }
+    });
     const clock = new THREE.Clock();
     this.playing = true;
+    this.delta = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this.playing) return;
-      stats.begin();
-      update(clock.getDelta(), clock.elapsedTime);
+      stats("frame").start();
+      this.delta = clock.getDelta();
+      this.elapsed = clock.elapsedTime;
+      update(this.delta, this.elapsed);
       this._renderer.render(this.scene, this.camera);
-      stats.end();
+      stats("frame").end();
+      stats().update();
     });
   }
 
@@ -188,15 +199,6 @@ class App {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-  }
-
-  _createStatsPanel(update) {
-    const stats = new Stats();
-    stats.showPanel(1);
-    stats.dom.style.left = "auto";
-    stats.dom.style.right = 0;
-    document.body.append(stats.dom);
-    return stats;
   }
 
   _generateItemsUI() {

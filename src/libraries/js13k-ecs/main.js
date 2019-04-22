@@ -4,7 +4,7 @@
 
 const THREE = require("three");
 const ecs = require("js13k-ecs/src/ecs").default;
-const App = require("../../common/app.js");
+const App = require("../../app.js");
 
 const APP = new App(update);
 
@@ -26,14 +26,14 @@ function Mesh(mesh) {
   this.mesh = mesh;
 }
 
-function Collider(collider) {
+function Collider(collider, collides) {
   this.collider = collider;
+  this.collides = collides;
   this.collided = null;
 }
 
-function Explosive(explodes = null, destructible = true) {
+function Explosive(destructible = true) {
   this.destructible = destructible;
-  this.explodes = explodes;
 }
 
 function ToRemove() {}
@@ -108,6 +108,10 @@ class CollisionSystem {
       let e2n = e1n.next;
       while (e2n) {
         const e2 = e2n.entity;
+        if (e1c.collides && !e2.has(e1c.collides)) {
+          e2n = e2n.next;
+          continue;
+        }
         const e2c = e2.get(Collider);
         const e2m = e2.get(Mesh).mesh;
         e2m.updateMatrixWorld();
@@ -130,11 +134,10 @@ class ExplosiveSystem {
       const { collided } = collider;
       const explosiveBelowFloor = entity.get(Mesh).mesh.position.y <= -0.5;
       const explosive = entity.get(Explosive);
-      const shouldExplodeCollided = collided && (explosive.explodes === null || collided.has(explosive.explodes));
-      if (explosiveBelowFloor || (shouldExplodeCollided && explosive.destructible)) {
+      if (explosiveBelowFloor || (collided && explosive.destructible)) {
         entity.add(new ToRemove());
       }
-      if (shouldExplodeCollided) {
+      if (collided) {
         collided.add(new ToRemove());
       }
     });
@@ -325,7 +328,7 @@ function createEnemy() {
   entity.add(mesh);
   entity.add(new Velocity(0, 0, 1.5));
   entity.add(new Collider(new THREE.Box3().setFromObject(mesh.mesh)));
-  entity.add(new Explosive(null, false));
+  entity.add(new Explosive(false));
   APP.scene.add(mesh.mesh);
   return entity;
 }
@@ -334,8 +337,8 @@ function createMine() {
   const entity = ecs.create();
   const mesh = APP.createBox("red");
   entity.add(new Mesh(mesh));
-  entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
-  entity.add(new Explosive(Enemy));
+  entity.add(new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
+  entity.add(new Explosive());
   APP.scene.add(mesh);
   return entity;
 }
@@ -345,8 +348,8 @@ function createProjectile() {
   const mesh = APP.createBox("red", 0.2);
   entity.add(new Projectile());
   entity.add(new Mesh(mesh));
-  entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
-  entity.add(new Explosive(Enemy));
+  entity.add(new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
+  entity.add(new Explosive());
   entity.add(new Gravity());
   entity.add(new Velocity(0, 0, -20));
   APP.scene.add(mesh);
@@ -359,7 +362,7 @@ function createTurret(withCollider = true, firingRate) {
   const mesh = APP.createBox("blue");
   entity.add(new Mesh(mesh));
   if (withCollider) {
-    entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
+    entity.add(new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
   }
   APP.scene.add(mesh);
   return entity;
@@ -374,7 +377,7 @@ function createTurretVehicle() {
   const mesh = APP.createBox("yellow", 0.9);
   mesh.add(turretMesh);
   entity.add(new Mesh(mesh));
-  entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
+  entity.add(new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
   APP.scene.add(mesh);
   return entity;
 }
@@ -384,7 +387,7 @@ function createCollector() {
   entity.add(new Collector());
   const mesh = APP.createBox("orange");
   entity.add(new Mesh(mesh));
-  entity.add(new Collider(new THREE.Box3().setFromObject(mesh)));
+  entity.add(new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
   APP.scene.add(mesh);
   return entity;
 }

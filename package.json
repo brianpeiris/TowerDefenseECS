@@ -1,8 +1,8 @@
 {
   "private": true,
   "dependencies": {
-    "three": "^0.101.1",
-    "stats.js": "^0.17.0"
+    "rstatsjs": "^1.0.1",
+    "three": "^0.101.1"
   },
   "devDependencies": {
     "@babel/core": "^7.4.0",
@@ -10,7 +10,7 @@
     "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.5",
     "browser-sync": "^2.26.3",
-    "eslint": "^5.13.0",
+    "eslint": "^5.16.0",
     "eslint-config-prettier": "^4.0.0",
     "eslint-plugin-prettier": "^3.0.1",
     "prettier": "^1.16.4",

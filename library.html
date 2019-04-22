@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>TowerDefenseECS | </title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+        color: white;
+      }
+      canvas {
+        display: block;
+      }
+      h1, #info {
+        position: absolute;
+        width: 100%;
+        text-align: center;
+      
+      }
+      #info {
+        font-size: 20pt;
+        margin-top: 2.5em;
+      }
+      #itemSelection {
+        position: absolute;
+        margin-left: 1em;
+        margin-top: 5em;
+      }
+      #itemSelection input {
+        display: none;
+      }
+      #power {
+        font-size: 18pt;
+      }
+      #power,
+      #itemSelection label {
+        width: 65px;
+        text-align: center;
+        margin-bottom: 1em;
+        box-sizing: border-box;
+        user-select: none;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        background-color: black;
+      }
+      #itemSelection label {
+        display: flex;
+        height: 65px;
+        border: 2px solid lightgrey;
+        font-size: 10pt;
+        justify-content: center;
+        align-items: center;
+        white-space: pre;
+      }
+      #itemSelection input:checked + label {
+        border-color: red;
+      }
+      #itemSelection input:disabled + label {
+        color: grey;
+        border-color: grey;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="heading"></h1>
+    <div id="info"></div>
+    <template id="itemTemplate">
+      <input name="item" type="radio" id="" value="" checked /><label for=""></label>
+    </template>
+    <form id="itemSelection">
+      <div id="power"></div>
+    </form>
+    <script>
+      const library = location.search.substring(1).split("&")[0];
+      heading.textContent = library;
+      document.title = library;
+      const script = document.createElement('script');
+      script.src = `/src/libraries/${library}/dist/main.js`;
+      document.body.append(script);
+    </script>
+  </body>
+</html>

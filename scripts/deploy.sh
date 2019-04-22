@@ -4,6 +4,7 @@ set -e
 scriptDirectory=$(dirname "$0")
 scriptDirectory=$(realpath "$scriptDirectory")
 rootDirectory="$scriptDirectory/.."
+cd "$rootDirectory";
 
 git checkout gh-pages
 
@@ -11,10 +12,8 @@ git merge master
 
 bash "$scriptDirectory/build.sh"
 
-cd "$rootDirectory";
-for library in $(ls libraries); do
-	if [[ $library == "common" ]]; then continue; fi
-	libraryDirectory="$rootDirectory/libraries/$library"
+for library in $(ls src/libraries); do
+	libraryDirectory="$rootDirectory/src/libraries/$library"
 	git add -f "$libraryDirectory/dist"
 done
 

@@ -1,0 +1,24 @@
+.rs-base {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 1em;
+}
+.rs-counter-base {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+}
+.rs-counter-value {
+  width: 3em;
+}
+.rs-canvas {
+  width: 50px !important;
+}
+.rs-counter-id {
+  display: none;
+}
+.rs-counter-value {
+  margin-right: 0.25em;
+  font-size: 8pt;
+}

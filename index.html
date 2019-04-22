@@ -75,9 +75,13 @@
         justify-content: center;
         align-items: center;
       }
-      #sidebar.hidden { display: none; }
-      #hamburger.hidden { display: none; }
-      #hamburger { 
+      #sidebar.hidden {
+        display: none;
+      }
+      #hamburger.hidden {
+        display: none;
+      }
+      #hamburger {
         position: absolute;
         margin-left: 1em;
         width: 65px;
@@ -107,7 +111,7 @@
       <a href="/"><h1>TowerDefenseECS<br /><span>TodoMVC for ECS libraries</span></h1></a>
       <ol id="list"></ol>
     </div>
-    <iframe name="viewer"></iframe>
+    <iframe id="viewer" name="viewer"></iframe>
     <script>
       const libraries = [
         {
@@ -122,6 +126,10 @@
           name: "ensy",
           githubOwner: "adngdb",
           githubRepo: "entity-system-js"
+        },
+        {
+          name: "hecs",
+          githubOwner: "robertlong"
         }
       ];
       const fragment = document.createDocumentFragment();
@@ -134,8 +142,8 @@
         const sicon = name => `<i class="fas fa-${name}"></i>`;
         const bicon = name => `<i class="fab fa-${name}"></i>`;
         li.innerHTML = `
-          <a href="libraries/common/library.html?library=${name}" target="viewer" onclick="hideSidebar()">${name}</a>
-          <a class="info-link" href="libraries/common/library.html?library=${name}&perf" onclick="hideSidebar()" target="viewer">
+          <a href="?${name}" target="viewer" onclick="return navigate('${name}')">${name}</a>
+          <a class="info-link" href="?${name}&perf" onclick="return navigate('${name}', true)" target="viewer">
             ${sicon("stopwatch")}
           </i></a>
           <a class="info-link code" href="${codeUrl}" target="_blank" rel="noopener">{}</a>
@@ -145,6 +153,24 @@
         fragment.append(li);
       });
       document.getElementById("list").append(fragment);
+      const viewer = document.getElementById("viewer");
+      navigateViewer();
+      function navigateViewer() {
+        const parts = location.search.substring(1).split("&");
+        if (parts[0]) {
+          viewer.contentWindow.location.replace("library.html?" + parts[0] + (parts[1] ? "&perf" : ""));
+          hideSidebar();
+        } else {
+          viewer.contentWindow.location.replace("about:blank");
+          showSidebar();
+        }
+      }
+      function navigate(library, perf) {
+        location.search = library + (perf ? "&perf" : "");
+        viewer.contentWindow.location.replace("library.html?" + library + (perf ? "&perf" : ""));
+        hideSidebar();
+        return false;
+      }
       function hideSidebar() {
         document.getElementById("sidebar").classList.add("hidden");
         document.getElementById("hamburger").classList.remove("hidden");
