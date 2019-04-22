@@ -4,7 +4,7 @@
 
 const THREE = require("three");
 const { EntityManager } = require("tiny-ecs");
-const App = require("../../common/app.js");
+const App = require("../../app.js");
 
 const APP = new App(update);
 

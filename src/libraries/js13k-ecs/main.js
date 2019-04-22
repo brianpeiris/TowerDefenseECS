@@ -4,7 +4,7 @@
 
 const THREE = require("three");
 const ecs = require("js13k-ecs/src/ecs").default;
-const App = require("../../common/app.js");
+const App = require("../../app.js");
 
 const APP = new App(update);
 

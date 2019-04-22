@@ -12,9 +12,8 @@ git merge master
 
 bash "$scriptDirectory/build.sh"
 
-for library in $(ls libraries); do
-	if [[ $library == "common" ]]; then continue; fi
-	libraryDirectory="$rootDirectory/libraries/$library"
+for library in $(ls src/libraries); do
+	libraryDirectory="$rootDirectory/src/libraries/$library"
 	git add -f "$libraryDirectory/dist"
 done
 

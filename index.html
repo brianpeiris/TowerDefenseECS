@@ -138,8 +138,8 @@
         const sicon = name => `<i class="fas fa-${name}"></i>`;
         const bicon = name => `<i class="fab fa-${name}"></i>`;
         li.innerHTML = `
-          <a href="libraries/common/library.html?library=${name}" target="viewer" onclick="hideSidebar()">${name}</a>
-          <a class="info-link" href="libraries/common/library.html?library=${name}&perf" onclick="hideSidebar()" target="viewer">
+          <a href="library.html?library=${name}" target="viewer" onclick="hideSidebar()">${name}</a>
+          <a class="info-link" href="library.html?library=${name}&perf" onclick="hideSidebar()" target="viewer">
             ${sicon("stopwatch")}
           </i></a>
           <a class="info-link code" href="${codeUrl}" target="_blank" rel="noopener">{}</a>

@@ -8,9 +8,8 @@ pushd "$rootDirectory"
 
 npm ci
 popd
-for library in $(ls libraries); do
-	if [[ $library == "common" ]]; then continue; fi
-	pushd "$rootDirectory/libraries/$library"
+for library in $(ls src/libraries); do
+	pushd "$rootDirectory/src/libraries/$library"
 	npm ci
 	popd
 done
