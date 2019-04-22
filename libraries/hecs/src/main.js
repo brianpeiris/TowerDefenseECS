@@ -42,17 +42,17 @@ class Mesh {
 world.registerComponent(Mesh);
 
 class Collider {
-  constructor(collider) {
+  constructor(collider, collides = null) {
     this.collider = collider;
+    this.collides = collides;
     this.collided = null;
   }
 }
 world.registerComponent(Collider);
 
 class Explosive {
-  constructor(explodes = null, destructible = true) {
+  constructor(destructible = true) {
     this.destructible = destructible;
-    this.explodes = explodes;
   }
 }
 world.registerComponent(Explosive);
@@ -100,7 +100,7 @@ function update() {
 class GravitySystem extends System {
   setup() {
     return {
-      entities: this.world.createQuery(Write(Velocity), Read(Gravity))
+      entities: world.createQuery(Write(Velocity), Read(Gravity))
     };
   }
   update() {
@@ -113,7 +113,7 @@ class GravitySystem extends System {
 class VelocitySystem extends System {
   setup() {
     return {
-      entities: this.world.createQuery(Read(Mesh), Read(Velocity))
+      entities: world.createQuery(Read(Mesh), Read(Velocity))
     };
   }
   update() {
@@ -133,8 +133,8 @@ class CollisionSystem extends System {
   }
   setup() {
     return {
-      e1: this.world.createQuery(Write(Collider), EntityId, Read(Mesh)),
-      e2: this.world.createQuery(Write(Collider), EntityId, Read(Mesh))
+      e1: world.createQuery(Write(Collider), EntityId, Read(Mesh)),
+      e2: world.createQuery(Write(Collider), EntityId, Read(Mesh))
     };
   }
   update() {
@@ -148,7 +148,7 @@ class CollisionSystem extends System {
       APP.updateBox(this.tempBox1, c1.collider, m1.mesh.matrixWorld);
       j = 0;
       for (const [c2, e2, m2] of this.ctx.e2) {
-        if (j > i) {
+        if (j < i && (c1.collides === null || world.hasComponent(e2, c1.collides))) {
           m2.mesh.updateMatrixWorld();
           APP.updateBox(this.tempBox2, c2.collider, m2.mesh.matrixWorld);
           if (this.tempBox1.intersectsBox(this.tempBox2)) {
@@ -166,19 +166,17 @@ class CollisionSystem extends System {
 class ExplosiveSystem extends System {
   setup() {
     return {
-      entities: this.world.createQuery(EntityId, Write(Collider), Read(Explosive), Read(Mesh))
+      entities: world.createQuery(EntityId, Write(Collider), Read(Explosive), Read(Mesh))
     };
   }
   update() {
     for (const [entity, collider, explosive, mesh] of this.ctx.entities) {
       const { collided } = collider;
       const explosiveBelowFloor = mesh.mesh.position.y <= -0.5;
-      const shouldExplodeCollided =
-        collided && (explosive.explodes === null || world.hasComponent(collided, explosive.explodes));
-      if (explosiveBelowFloor || (shouldExplodeCollided && explosive.destructible)) {
+      if (explosiveBelowFloor || (collided && explosive.destructible)) {
         world.addComponent(entity, new ToRemove());
       }
-      if (shouldExplodeCollided) {
+      if (collided) {
         world.addComponent(collider.collided, new ToRemove());
       }
     }
@@ -186,10 +184,14 @@ class ExplosiveSystem extends System {
 }
 
 class OnboardRemover extends System {
+  setup() {
+    return {
+      entities: world.createQuery(EntityId, Read(Vehicle), Read(ToRemove))
+    };
+  }
   update() {
-    const entities = this.entities.queryComponents([Vehicle, ToRemove]);
-    for (const entity of entities) {
-      entity.vehicle.onboard.addComponent(ToRemove);
+    for (const [entity] of this.ctx.entities) {
+      world.addComponent(entity, new ToRemove());
     }
   }
 }
@@ -197,7 +199,7 @@ class OnboardRemover extends System {
 class MeshRemover extends System {
   setup() {
     return {
-      entities: this.world.createQuery(EntityId, Read(Mesh), Read(ToRemove))
+      entities: world.createQuery(EntityId, Read(Mesh), Read(ToRemove))
     };
   }
   update() {
@@ -213,18 +215,22 @@ class ResourceSystem extends System {
     super(entities);
     this.power = 150;
   }
-  update(delta) {
-    const entities = this.entities.queryComponents([Collector]);
-    for (const entity of entities) {
-      this.power += entity.collector.rate * delta;
+  setup() {
+    return {
+      entities: world.createQuery(Read(Collector))
+    };
+  }
+  update() {
+    for (const [collector] of this.ctx.entities) {
+      this.power += collector.rate * APP.delta;
     }
     APP.updatePower(this.power);
   }
 }
 
 class PlacementSystem extends System {
-  constructor(entities, resourceSystem) {
-    super(entities);
+  constructor(resourceSystem) {
+    super();
     this.resourceSystem = resourceSystem;
     this.worldPosition = new THREE.Vector3();
     this.factories = {
@@ -238,7 +244,13 @@ class PlacementSystem extends System {
       if (!APP.placementValid) return;
       let item = this.factories[itemName]();
       this.resourceSystem.power -= cost;
-      item.mesh.mesh.position.copy(APP.placeholder.position);
+      const mesh = world.getImmutableComponent(item, Mesh);
+      mesh.mesh.position.copy(APP.placeholder.position);
+    };
+  }
+  setup() {
+    return {
+      entities: world.createQuery(EntityId, Read(Mesh))
     };
   }
   update() {
@@ -250,13 +262,12 @@ class PlacementSystem extends System {
       APP.updatePlacement(false);
       return;
     }
-    const entities = this.entities.queryComponents([Mesh]);
     const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
     let placementValid = !APP.currentItem.input.disabled;
-    for (const entity of entities) {
-      entity.mesh.mesh.getWorldPosition(this.worldPosition);
+    for (const [entity, mesh] of this.ctx.entities) {
+      mesh.mesh.getWorldPosition(this.worldPosition);
       const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-      if (!entity.hasTag("projectile") && x === ex && z === ez) {
+      if (!world.hasComponent(entity, Projectile) && x === ex && z === ez) {
         placementValid = false;
       }
     }
@@ -267,7 +278,7 @@ class PlacementSystem extends System {
 class TurretSystem extends System {
   setup() {
     return {
-      entities: this.world.createQuery(Write(Turret), Read(Mesh))
+      entities: world.createQuery(Write(Turret), Read(Mesh))
     };
   }
   update() {
@@ -286,7 +297,7 @@ class TurretSystem extends System {
 class VehicleSystem extends System {
   setup() {
     return {
-      entities: this.world.createQuery(Write(Vehicle), Read(Mesh))
+      entities: world.createQuery(Write(Vehicle), Read(Mesh))
     };
   }
   update() {
@@ -309,8 +320,8 @@ class EnemyWaveSystem extends System {
   setup() {
     return null;
   }
-  update(delta, elapsed) {
-    const currentWave = APP.getCurrentWave(elapsed);
+  update() {
+    const currentWave = APP.getCurrentWave(APP.elapsed);
     if (currentWave === this.currentWave) return;
     this.currentWave = currentWave;
     this.generateWave(currentWave);
@@ -330,21 +341,25 @@ class EnemyWaveSystem extends System {
 }
 
 class GameOverSystem extends System {
-  constructor(entities, enemyWaveSystem) {
-    super(entities);
+  constructor(enemyWaveSystem) {
+    super();
     this.enemyWaveSystem = enemyWaveSystem;
     this.tempBox = new THREE.Box3();
     this.collider = new THREE.Box3();
     this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
   }
+  setup() {
+    return {
+      entities: world.createQuery(Read(Collider), Read(Mesh), Read(Enemy))
+    };
+  }
   update() {
-    const entities = this.entities.queryTag("enemy");
-    if (!entities.length && !this.enemyWaveSystem.currentWave) {
+    if (!this.ctx.entities.length && !this.enemyWaveSystem.currentWave) {
       APP.stopPlaying("You Win!");
       return;
     }
-    for (const entity of entities) {
-      APP.updateBox(this.tempBox, entity.collider.collider, entity.mesh.mesh.matrixWorld);
+    for (const [collider, mesh] of this.ctx.entities) {
+      APP.updateBox(this.tempBox, collider.collider, mesh.mesh.matrixWorld);
       if (this.tempBox.intersectsBox(this.collider)) {
         APP.stopPlaying("Game Over");
         break;
@@ -357,17 +372,17 @@ world.registerSystem(new GravitySystem());
 world.registerSystem(new VelocitySystem());
 world.registerSystem(new CollisionSystem());
 world.registerSystem(new ExplosiveSystem());
-//world.registerSystem(new OnboardRemover());
+world.registerSystem(new OnboardRemover());
 world.registerSystem(new MeshRemover());
-//const resourceSystem = new ResourceSystem();
-//world.registerSystem(resourceSystem);
-//world.registerSystem(new PlacementSystem(resourceSystem));
+const resourceSystem = new ResourceSystem();
+world.registerSystem(resourceSystem);
+world.registerSystem(new PlacementSystem(resourceSystem));
 world.registerSystem(new TurretSystem());
 world.registerSystem(new VehicleSystem());
 const enemyWaveSystem = new EnemyWaveSystem();
 world.registerSystem(enemyWaveSystem);
 if (!APP.perfMode) {
-  //world.registerSystem(new GameOverSystem(enemyWaveSystem));
+  world.registerSystem(new GameOverSystem(enemyWaveSystem));
 }
 
 //
@@ -381,20 +396,18 @@ function createEnemy() {
   world.addComponent(entity, new Mesh(mesh));
   world.addComponent(entity, new Velocity(0, 0, 1.5));
   world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh)));
-  world.addComponent(entity, new Explosive(null, false));
+  world.addComponent(entity, new Explosive(false));
   APP.scene.add(mesh);
   return entity;
 }
 
 function createMine() {
-  const entity = entities.createEntity();
-  entity.addComponent(Mesh);
-  entity.mesh.mesh = APP.createBox("red");
-  entity.addComponent(Collider);
-  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  entity.addComponent(Explosive);
-  entity.explosive.explodes = "enemy";
-  APP.scene.add(entity.mesh.mesh);
+  const entity = world.createEntity();
+  const mesh = APP.createBox("red");
+  world.addComponent(entity, new Mesh(mesh));
+  world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
+  world.addComponent(entity, new Explosive());
+  APP.scene.add(mesh);
   return entity;
 }
 
@@ -403,8 +416,8 @@ function createProjectile() {
   world.addComponent(entity, new Projectile());
   const mesh = APP.createBox("red", 0.2);
   world.addComponent(entity, new Mesh(mesh));
-  world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh)));
-  world.addComponent(entity, new Explosive(Enemy));
+  world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
+  world.addComponent(entity, new Explosive());
   world.addComponent(entity, new Gravity());
   world.addComponent(entity, new Velocity(0, 0, -20));
   APP.scene.add(mesh);
@@ -417,7 +430,7 @@ function createTurret(withCollider = true, firingRate) {
   const mesh = APP.createBox("blue");
   world.addComponent(entity, new Mesh(mesh));
   if (withCollider) {
-    world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh)));
+    world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
   }
   APP.scene.add(mesh);
   return entity;
@@ -433,20 +446,19 @@ function createTurretVehicle() {
   const mesh = APP.createBox("yellow", 0.9);
   mesh.add(turretMesh.mesh);
   world.addComponent(entity, new Mesh(mesh));
-  world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh)));
+  world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
 
   APP.scene.add(mesh);
   return entity;
 }
 
 function createCollector() {
-  const entity = entities.createEntity();
-  entity.addComponent(Collector);
-  entity.addComponent(Mesh);
-  entity.mesh.mesh = APP.createBox("orange");
-  entity.addComponent(Collider);
-  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  APP.scene.add(entity.mesh.mesh);
+  const entity = world.createEntity();
+  world.addComponent(entity, new Collector());
+  const mesh = APP.createBox("orange");
+  world.addComponent(entity, new Mesh(mesh));
+  world.addComponent(entity, new Collider(new THREE.Box3().setFromObject(mesh), Enemy));
+  APP.scene.add(mesh);
   return entity;
 }
 
