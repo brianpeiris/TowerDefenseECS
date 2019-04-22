@@ -34,12 +34,12 @@ function Mesh() {
 
 function Collider() {
   this.collider = null;
+  this.collides = null;
   this.collided = null;
 }
 
 function Explosive() {
   this.destructible = true;
-  this.explodes = null;
 }
 
 function ToRemove() {}
@@ -114,6 +114,7 @@ class CollisionSystem extends System {
       APP.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
       for (let j = i + 1; j < entities.length; j++) {
         const e2 = entities[j];
+        if (e1c.collides && !e2.hasTag(e1c.collides)) continue;
         const e2c = e2.collider;
         const e2m = e2.mesh.mesh;
         e2m.updateMatrixWorld();
@@ -132,12 +133,10 @@ class ExplosiveSystem extends System {
     for (const entity of entities) {
       const { collided } = entity.collider;
       const explosiveBelowFloor = entity.mesh.mesh.position.y <= -0.5;
-      const shouldExplodeCollided =
-        collided && (collided.hasTag(entity.explosive.explodes) || entity.explosive.explodes === null);
-      if (explosiveBelowFloor || (shouldExplodeCollided && entity.explosive.destructible)) {
+      if (explosiveBelowFloor || (collided && entity.explosive.destructible)) {
         entity.addComponent(ToRemove);
       }
-      if (shouldExplodeCollided) {
+      if (collided) {
         entity.collider.collided.addComponent(ToRemove);
       }
     }
@@ -344,9 +343,9 @@ function createMine() {
   entity.addComponent(Mesh);
   entity.mesh.mesh = APP.createBox("red");
   entity.addComponent(Collider);
+  entity.collider.collides = "enemy";
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
-  entity.explosive.explodes = "enemy";
   APP.scene.add(entity.mesh.mesh);
   return entity;
 }
@@ -357,9 +356,9 @@ function createProjectile() {
   entity.addComponent(Mesh);
   entity.mesh.mesh = APP.createBox("red", 0.2);
   entity.addComponent(Collider);
+  entity.collider.collides = "enemy";
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   entity.addComponent(Explosive);
-  entity.explosive.explodes = "enemy";
   entity.addComponent(Gravity);
   entity.addComponent(Velocity);
   entity.velocity.z = -20.0;
@@ -378,6 +377,7 @@ function createTurret(withCollider = true, firingRate) {
   entity.mesh.mesh = APP.createBox("blue");
   if (withCollider) {
     entity.addComponent(Collider);
+    entity.collider.collides = "enemy";
     entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   }
   APP.scene.add(entity.mesh.mesh);
@@ -390,6 +390,7 @@ function createTurretVehicle() {
   entity.addComponent(Mesh);
   entity.mesh.mesh = APP.createBox("yellow", 0.9);
   entity.addComponent(Collider);
+  entity.collider.collides = "enemy";
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   const turret = createTurret(false, 1);
   turret.mesh.mesh.position.y = 0.5;
@@ -405,6 +406,7 @@ function createCollector() {
   entity.addComponent(Mesh);
   entity.mesh.mesh = APP.createBox("orange");
   entity.addComponent(Collider);
+  entity.collider.collides = "enemy";
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
   APP.scene.add(entity.mesh.mesh);
   return entity;

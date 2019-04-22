@@ -41,14 +41,14 @@ manager.addComponent("Mesh", {
 manager.addComponent("Collider", {
   state: {
     collider: null,
+    collides: null,
     collided: null
   }
 });
 
 manager.addComponent("Explosive", {
   state: {
-    destructible: true,
-    explodes: null
+    destructible: true
   }
 });
 
@@ -135,6 +135,7 @@ class CollisionProcessor extends Processor {
       APP.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
       for (let j = i + 1; j < entityIds.length; j++) {
         const e2 = entityIds[j];
+        if (e1c.collides && !this.manager.entityHasComponent(e2, e1c.collides)) continue;
         const e2c = entities[e2];
         const e2m = this.manager.getComponentDataForEntity("Mesh", e2).mesh;
         e2m.updateMatrixWorld();
@@ -153,14 +154,10 @@ class ExplosiveProcessor extends Processor {
     for (const entityId in entities) {
       const { collided } = this.manager.getComponentDataForEntity("Collider", entityId);
       const explosiveBelowFloor = this.manager.getComponentDataForEntity("Mesh", entityId).mesh.position.y <= -0.5;
-      const shouldExplodeCollided =
-        collided &&
-        (this.manager.entityHasComponent(collided, entities[entityId].explodes) ||
-          entities[entityId].explodes === null);
-      if (explosiveBelowFloor || (shouldExplodeCollided && entities[entityId].destructible)) {
+      if (explosiveBelowFloor || (collided && entities[entityId].destructible)) {
         this.manager.addComponentsToEntity(["ToRemove"], entityId);
       }
-      if (shouldExplodeCollided) {
+      if (collided) {
         this.manager.addComponentsToEntity(["ToRemove"], collided);
       }
     }
@@ -374,8 +371,11 @@ function createMine() {
   const entityId = manager.createEntity(["Mesh", "Collider", "Explosive"]);
   const mesh = APP.createBox("red");
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
-  manager.updateComponentDataForEntity("Collider", entityId, { collider: new THREE.Box3().setFromObject(mesh) });
-  manager.updateComponentDataForEntity("Explosive", entityId, { explodes: "Enemy" });
+  manager.updateComponentDataForEntity("Collider", entityId, {
+    collider: new THREE.Box3().setFromObject(mesh),
+    collides: "Enemy"
+  });
+  manager.updateComponentDataForEntity("Explosive", entityId);
   APP.scene.add(mesh);
   return entityId;
 }
@@ -384,8 +384,11 @@ function createProjectile() {
   const entityId = manager.createEntity(["Projectile", "Mesh", "Velocity", "Gravity", "Explosive", "Collider"]);
   const mesh = APP.createBox("red", 0.2);
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
-  manager.updateComponentDataForEntity("Collider", entityId, { collider: new THREE.Box3().setFromObject(mesh) });
-  manager.updateComponentDataForEntity("Explosive", entityId, { explodes: "Enemy" });
+  manager.updateComponentDataForEntity("Collider", entityId, {
+    collider: new THREE.Box3().setFromObject(mesh),
+    collides: "Enemy"
+  });
+  manager.updateComponentDataForEntity("Explosive", entityId);
   manager.updateComponentDataForEntity("Velocity", entityId, { z: -20.0 });
   APP.scene.add(mesh);
   return entityId;
@@ -400,7 +403,10 @@ function createTurret(withCollider = true, firingRate) {
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
   if (withCollider) {
     manager.addComponentsToEntity(["Collider"], entityId);
-    manager.updateComponentDataForEntity("Collider", entityId, { collider: new THREE.Box3().setFromObject(mesh) });
+    manager.updateComponentDataForEntity("Collider", entityId, {
+      collider: new THREE.Box3().setFromObject(mesh),
+      collides: "Enemy"
+    });
   }
   APP.scene.add(mesh);
   return entityId;
@@ -410,7 +416,10 @@ function createTurretVehicle() {
   const entityId = manager.createEntity(["Vehicle", "Mesh", "Collider"]);
   const mesh = APP.createBox("yellow", 0.9);
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
-  manager.updateComponentDataForEntity("Collider", entityId, { collider: new THREE.Box3().setFromObject(mesh) });
+  manager.updateComponentDataForEntity("Collider", entityId, {
+    collider: new THREE.Box3().setFromObject(mesh),
+    collides: "Enemy"
+  });
   const turret = createTurret(false, 1);
   const turretMesh = manager.getComponentDataForEntity("Mesh", turret).mesh;
   turretMesh.position.y = 0.5;
@@ -424,7 +433,10 @@ function createCollector() {
   const entityId = manager.createEntity(["Collector", "Mesh", "Collider"]);
   const mesh = APP.createBox("orange");
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
-  manager.updateComponentDataForEntity("Collider", entityId, { collider: new THREE.Box3().setFromObject(mesh) });
+  manager.updateComponentDataForEntity("Collider", entityId, {
+    collider: new THREE.Box3().setFromObject(mesh),
+    collides: "Enemy"
+  });
   APP.scene.add(mesh);
   return entityId;
 }
