@@ -186,12 +186,12 @@ class ExplosiveSystem extends System {
 class OnboardRemover extends System {
   setup() {
     return {
-      entities: world.createQuery(EntityId, Read(Vehicle), Read(ToRemove))
+      entities: world.createQuery(Read(Vehicle), Read(ToRemove))
     };
   }
   update() {
-    for (const [entity] of this.ctx.entities) {
-      world.addComponent(entity, new ToRemove());
+    for (const [vehicle] of this.ctx.entities) {
+      world.addComponent(vehicle.onboard, new ToRemove());
     }
   }
 }

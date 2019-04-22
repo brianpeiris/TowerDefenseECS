@@ -1,4 +1,4 @@
-const Stats = require("stats.js");
+const rStats = require("rstatsjs/src/rStats.js");
 const THREE = require("three");
 
 class App {
@@ -69,18 +69,23 @@ class App {
     }
     this.nextWaveIndex = 0;
 
-    const stats = this._createStatsPanel(update);
+    const stats = new rStats({
+      values: {
+        frame: { caption: "frame (ms)", average: true }
+      }
+    });
     const clock = new THREE.Clock();
     this.playing = true;
     this.delta = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this.playing) return;
-      stats.begin();
+      stats("frame").start();
       this.delta = clock.getDelta();
       this.elapsed = clock.elapsedTime;
       update(this.delta, this.elapsed);
       this._renderer.render(this.scene, this.camera);
-      stats.end();
+      stats("frame").end();
+      stats().update();
     });
   }
 
@@ -194,15 +199,6 @@ class App {
     this._renderer.setSize(window.innerWidth, window.innerHeight);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-  }
-
-  _createStatsPanel() {
-    const stats = new Stats();
-    stats.showPanel(1);
-    stats.dom.style.left = "auto";
-    stats.dom.style.right = 0;
-    document.body.append(stats.dom);
-    return stats;
   }
 
   _generateItemsUI() {
