@@ -71,7 +71,7 @@ class App {
 
     const stats = new rStats({
       values: {
-        frame: { caption: "frame (ms)", average: true }
+        frame: { average: true }
       }
     });
     const clock = new THREE.Clock();

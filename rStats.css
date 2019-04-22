@@ -12,7 +12,13 @@
 .rs-counter-value {
   width: 3em;
 }
-.rs-counter-id, .rs-counter-value {
-  margin-right: 0.5em;
+.rs-canvas {
+  width: 50px !important;
+}
+.rs-counter-id {
+  display: none;
+}
+.rs-counter-value {
+  margin-right: 0.25em;
   font-size: 8pt;
 }
