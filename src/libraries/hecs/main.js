@@ -3,7 +3,7 @@
 //
 
 const THREE = require("three");
-const { World, System, EntityId, Read, Write } = require("hecs");
+const { World, System, EntityId, Read, Write, SparseArrayComponentStorage } = require("hecs");
 const App = require("../../app.js");
 
 const APP = new App(update);
@@ -25,7 +25,7 @@ class Velocity {
     this.z = z;
   }
 }
-world.registerComponent(Velocity);
+world.registerComponent(Velocity, new SparseArrayComponentStorage());
 
 class Gravity {
   constructor() {
@@ -39,7 +39,7 @@ class Mesh {
     this.mesh = mesh;
   }
 }
-world.registerComponent(Mesh);
+world.registerComponent(Mesh, new SparseArrayComponentStorage());
 
 class Collider {
   constructor(collider, collides = null) {
@@ -48,20 +48,20 @@ class Collider {
     this.collided = null;
   }
 }
-world.registerComponent(Collider);
+world.registerComponent(Collider, new SparseArrayComponentStorage());
 
 class Explosive {
   constructor(destructible = true) {
     this.destructible = destructible;
   }
 }
-world.registerComponent(Explosive);
+world.registerComponent(Explosive, new SparseArrayComponentStorage());
 
 class ToRemove {}
 world.registerComponent(ToRemove);
 
 class Enemy {}
-world.registerComponent(Enemy);
+world.registerComponent(Enemy, new SparseArrayComponentStorage());
 
 class Projectile {}
 world.registerComponent(Projectile);
@@ -354,7 +354,7 @@ class GameOverSystem extends System {
     };
   }
   update() {
-    if (!this.ctx.entities.length && !this.enemyWaveSystem.currentWave) {
+    if (this.ctx.entities.isEmpty() && !this.enemyWaveSystem.currentWave) {
       APP.stopPlaying("You Win!");
       return;
     }

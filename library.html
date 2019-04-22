@@ -75,8 +75,9 @@
       <div id="power"></div>
     </form>
     <script>
-      const library = new URLSearchParams(location.search).get('library');
+      const library = location.search.substring(1).split("&")[0];
       heading.textContent = library;
+      document.title = library;
       const script = document.createElement('script');
       script.src = `/src/libraries/${library}/dist/main.js`;
       document.body.append(script);
