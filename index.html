@@ -132,11 +132,12 @@
           githubOwner: "robertlong"
         }
       ];
+
       const fragment = document.createDocumentFragment();
       libraries.forEach(library => {
         const { name, githubOwner, githubRepo } = library;
         const li = document.createElement("li");
-        const codeUrl = `https://github.com/brianpeiris/TowerDefenseECS/blob/master/libraries/${name}/src/main.js`;
+        const codeUrl = `https://github.com/brianpeiris/TowerDefenseECS/blob/master/src/libraries/${name}/main.js`;
         const githubUrl = `https://github.com/${githubOwner}/${githubRepo || name}`;
         const npmUrl = `https://www.npmjs.com/package/${name}`;
         const sicon = name => `<i class="fas fa-${name}"></i>`;
@@ -153,6 +154,7 @@
         fragment.append(li);
       });
       document.getElementById("list").append(fragment);
+
       const viewer = document.getElementById("viewer");
       navigateViewer();
       function navigateViewer() {
@@ -171,6 +173,7 @@
         hideSidebar();
         return false;
       }
+
       function hideSidebar() {
         document.getElementById("sidebar").classList.add("hidden");
         document.getElementById("hamburger").classList.remove("hidden");
