@@ -159,7 +159,7 @@
       navigateViewer();
       function navigateViewer() {
         const parts = location.search.substring(1).split("&");
-        if (parts[0]) {
+        if (parts[0] && libraries.find(lib => lib.name === parts[0])) {
           viewer.contentWindow.location.replace("library.html?" + parts[0] + (parts[1] ? "&perf" : ""));
           hideSidebar();
         } else {
