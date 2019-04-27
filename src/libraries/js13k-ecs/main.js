@@ -68,16 +68,22 @@ function update(delta) {
 }
 
 class GravitySystem {
+  constructor() {
+    this.query = ecs.select(Velocity, Gravity);
+  }
   update(delta) {
-    ecs.select(Velocity, Gravity).iterate(entity => {
+    this.query.iterate(entity => {
       entity.get(Velocity).y += entity.get(Gravity).force * delta;
     });
   }
 }
 
 class VelocitySystem {
+  constructor() {
+    this.query = ecs.select(Velocity, Mesh);
+  }
   update(delta) {
-    ecs.select(Velocity, Mesh).iterate(entity => {
+    this.query.iterate(entity => {
       const mesh = entity.get(Mesh);
       const velocity = entity.get(Velocity);
       mesh.mesh.position.x += velocity.x * delta;
@@ -89,16 +95,16 @@ class VelocitySystem {
 
 class CollisionSystem {
   constructor() {
+    this.query = ecs.select(Mesh, Collider);
     this.tempBox1 = new THREE.Box3();
     this.tempBox2 = new THREE.Box3();
   }
   update() {
-    const entities = ecs.select(Mesh, Collider);
-    entities.iterate(entity => {
+    this.query.iterate(entity => {
       entity.get(Collider).collided = null;
     });
 
-    let e1n = entities.list;
+    let e1n = this.query.list;
     while (e1n) {
       const e1 = e1n.entity;
       const e1c = e1.get(Collider);
@@ -128,8 +134,11 @@ class CollisionSystem {
 }
 
 class ExplosiveSystem {
+  constructor() {
+    this.query = ecs.select(Mesh, Explosive, Collider);
+  }
   update() {
-    ecs.select(Mesh, Explosive, Collider).iterate(entity => {
+    this.query.iterate(entity => {
       const collider = entity.get(Collider);
       const { collided } = collider;
       const explosiveBelowFloor = entity.get(Mesh).mesh.position.y <= -0.5;
@@ -145,8 +154,11 @@ class ExplosiveSystem {
 }
 
 class OnboardRemover {
+  constructor() {
+    this.query = ecs.select(Vehicle, ToRemove);
+  }
   update() {
-    ecs.select(Vehicle, ToRemove).iterate(entity => {
+    this.query.iterate(entity => {
       entity.get(Vehicle).onboard.add(new ToRemove());
     });
   }
@@ -154,11 +166,12 @@ class OnboardRemover {
 
 class MeshRemover {
   constructor() {
+    this.query = ecs.select(Mesh, ToRemove);
     this._entitiesToRemove = [];
   }
   update() {
     this._entitiesToRemove.length = 0;
-    ecs.select(Mesh, ToRemove).iterate(entity => {
+    this.query.iterate(entity => {
       this._entitiesToRemove.push(entity);
     });
     for (const entity of this._entitiesToRemove) {
@@ -170,10 +183,11 @@ class MeshRemover {
 
 class ResourceSystem {
   constructor() {
+    this.query = ecs.select(Collector);
     this.power = 150;
   }
   update(delta) {
-    ecs.select(Collector).iterate(entity => {
+    this.query.iterate(entity => {
       this.power += entity.get(Collector).rate * delta;
     });
     APP.updatePower(this.power);
@@ -183,6 +197,7 @@ class ResourceSystem {
 class PlacementSystem {
   constructor(resourceSystem) {
     this.resourceSystem = resourceSystem;
+    this.query = ecs.select(Mesh);
     this.worldPosition = new THREE.Vector3();
     this.factories = {
       mine: createMine,
@@ -207,10 +222,9 @@ class PlacementSystem {
       APP.updatePlacement(false);
       return;
     }
-    const entities = ecs.select(Mesh);
     const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
     let placementValid = !APP.currentItem.input.disabled;
-    entities.iterate(entity => {
+    this.query.iterate(entity => {
       entity.get(Mesh).mesh.getWorldPosition(this.worldPosition);
       const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
       if (!entity.has(Projectile) && x === ex && z === ez) {
@@ -222,8 +236,11 @@ class PlacementSystem {
 }
 
 class TurretSystem {
+  constructor() {
+    this.query = ecs.select(Turret, Mesh);
+  }
   update(delta) {
-    ecs.select(Turret, Mesh).iterate(entity => {
+    this.query.iterate(entity => {
       const turret = entity.get(Turret);
       turret.timeUntilFire -= delta;
       if (turret.timeUntilFire <= 0) {
@@ -236,8 +253,11 @@ class TurretSystem {
 }
 
 class VehicleSystem {
+  constructor() {
+    this.query = ecs.select(Vehicle, Mesh);
+  }
   update(delta) {
-    ecs.select(Vehicle, Mesh).iterate(entity => {
+    this.query.iterate(entity => {
       const { position } = entity.get(Mesh).mesh;
       if (Math.abs(position.x) >= 2) {
         position.x = Math.sign(position.x) * 2;
@@ -276,17 +296,17 @@ class EnemyWaveSystem {
 class GameOverSystem {
   constructor(enemyWaveSystem) {
     this.enemyWaveSystem = enemyWaveSystem;
+    this.query = ecs.select(Enemy);
     this.tempBox = new THREE.Box3();
     this.collider = new THREE.Box3();
     this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
   }
   update() {
-    const entities = ecs.select(Enemy);
-    if (!entities.length && !this.enemyWaveSystem.currentWave) {
+    if (!this.query.length && !this.enemyWaveSystem.currentWave) {
       APP.stopPlaying("You Win!");
       return;
     }
-    let node = entities.list;
+    let node = this.query.list;
     while (node) {
       const { entity } = node;
       APP.updateBox(this.tempBox, entity.get(Collider).collider, entity.get(Mesh).mesh.matrixWorld);

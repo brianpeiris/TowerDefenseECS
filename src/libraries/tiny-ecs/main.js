@@ -62,12 +62,6 @@ function Collector() {
 // Systems
 //
 
-class System {
-  constructor(entities) {
-    this.entities = entities;
-  }
-}
-
 const systems = [];
 function update(delta, elapsed) {
   for (const system of systems) {
@@ -75,19 +69,23 @@ function update(delta, elapsed) {
   }
 }
 
-class GravitySystem extends System {
+class GravitySystem {
+  constructor(entities) {
+    this.query = entities.queryComponents([Velocity, Gravity]);
+  }
   update(delta) {
-    const entities = this.entities.queryComponents([Velocity, Gravity]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       entity.velocity.y += entity.gravity.force * delta;
     }
   }
 }
 
-class VelocitySystem extends System {
+class VelocitySystem {
+  constructor(entities) {
+    this.query = entities.queryComponents([Velocity, Mesh]);
+  }
   update(delta) {
-    const entities = this.entities.queryComponents([Velocity, Mesh]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       entity.mesh.mesh.position.x += entity.velocity.x * delta;
       entity.mesh.mesh.position.y += entity.velocity.y * delta;
       entity.mesh.mesh.position.z += entity.velocity.z * delta;
@@ -95,25 +93,24 @@ class VelocitySystem extends System {
   }
 }
 
-class CollisionSystem extends System {
+class CollisionSystem {
   constructor(entities) {
-    super(entities);
+    this.query = entities.queryComponents([Mesh, Collider]);
     this.tempBox1 = new THREE.Box3();
     this.tempBox2 = new THREE.Box3();
   }
   update() {
-    const entities = this.entities.queryComponents([Mesh, Collider]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       entity.collider.collided = null;
     }
-    for (let i = 0; i < entities.length; i++) {
-      const e1 = entities[i];
+    for (let i = 0; i < this.query.length; i++) {
+      const e1 = this.query[i];
       const e1c = e1.collider;
       const e1m = e1.mesh.mesh;
       e1m.updateMatrixWorld();
       APP.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
-      for (let j = i + 1; j < entities.length; j++) {
-        const e2 = entities[j];
+      for (let j = i + 1; j < this.query.length; j++) {
+        const e2 = this.query[j];
         if (e1c.collides && !e2.hasTag(e1c.collides)) continue;
         const e2c = e2.collider;
         const e2m = e2.mesh.mesh;
@@ -127,10 +124,12 @@ class CollisionSystem extends System {
   }
 }
 
-class ExplosiveSystem extends System {
+class ExplosiveSystem {
+  constructor(entities) {
+    this.query = entities.queryComponents([Mesh, Explosive, Collider]);
+  }
   update() {
-    const entities = this.entities.queryComponents([Mesh, Explosive, Collider]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       const { collided } = entity.collider;
       const explosiveBelowFloor = entity.mesh.mesh.position.y <= -0.5;
       if (explosiveBelowFloor || (collided && entity.explosive.destructible)) {
@@ -143,24 +142,25 @@ class ExplosiveSystem extends System {
   }
 }
 
-class OnboardRemover extends System {
+class OnboardRemover {
+  constructor(entities) {
+    this.query = entities.queryComponents([Vehicle, ToRemove]);
+  }
   update() {
-    const entities = this.entities.queryComponents([Vehicle, ToRemove]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       entity.vehicle.onboard.addComponent(ToRemove);
     }
   }
 }
 
-class MeshRemover extends System {
+class MeshRemover {
   constructor(entities) {
-    super(entities);
+    this.query = entities.queryComponents([Mesh, ToRemove]);
     this._entitiesToRemove = [];
   }
   update() {
     this._entitiesToRemove.length = 0;
-    const entities = this.entities.queryComponents([Mesh, ToRemove]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       this._entitiesToRemove.push(entity);
     }
     for (const entity of this._entitiesToRemove) {
@@ -170,23 +170,22 @@ class MeshRemover extends System {
   }
 }
 
-class ResourceSystem extends System {
+class ResourceSystem {
   constructor(entities) {
-    super(entities);
+    this.query = entities.queryComponents([Collector]);
     this.power = 150;
   }
   update(delta) {
-    const entities = this.entities.queryComponents([Collector]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       this.power += entity.collector.rate * delta;
     }
     APP.updatePower(this.power);
   }
 }
 
-class PlacementSystem extends System {
+class PlacementSystem {
   constructor(entities, resourceSystem) {
-    super(entities);
+    this.query = entities.queryComponents([Mesh]);
     this.resourceSystem = resourceSystem;
     this.worldPosition = new THREE.Vector3();
     this.factories = {
@@ -212,10 +211,9 @@ class PlacementSystem extends System {
       APP.updatePlacement(false);
       return;
     }
-    const entities = this.entities.queryComponents([Mesh]);
     const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
     let placementValid = !APP.currentItem.input.disabled;
-    for (const entity of entities) {
+    for (const entity of this.query) {
       entity.mesh.mesh.getWorldPosition(this.worldPosition);
       const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
       if (!entity.hasTag("projectile") && x === ex && z === ez) {
@@ -226,10 +224,12 @@ class PlacementSystem extends System {
   }
 }
 
-class TurretSystem extends System {
+class TurretSystem {
+  constructor(entities) {
+    this.query = entities.queryComponents([Turret, Mesh]);
+  }
   update(delta) {
-    const entities = this.entities.queryComponents([Turret, Mesh]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       entity.turret.timeUntilFire -= delta;
       if (entity.turret.timeUntilFire <= 0) {
         const projectile = createProjectile();
@@ -240,10 +240,12 @@ class TurretSystem extends System {
   }
 }
 
-class VehicleSystem extends System {
+class VehicleSystem {
+  constructor(entities) {
+    this.query = entities.queryComponents([Vehicle, Mesh]);
+  }
   update(delta) {
-    const entities = this.entities.queryComponents([Vehicle, Mesh]);
-    for (const entity of entities) {
+    for (const entity of this.query) {
       const { position } = entity.mesh.mesh;
       if (Math.abs(position.x) >= 2) {
         position.x = Math.sign(position.x) * 2;
@@ -254,9 +256,8 @@ class VehicleSystem extends System {
   }
 }
 
-class EnemyWaveSystem extends System {
-  constructor(entities) {
-    super(entities);
+class EnemyWaveSystem {
+  constructor() {
     this.currentWave = APP.waves[0];
   }
   update(delta, elapsed) {
@@ -278,21 +279,20 @@ class EnemyWaveSystem extends System {
   }
 }
 
-class GameOverSystem extends System {
+class GameOverSystem {
   constructor(entities, enemyWaveSystem) {
-    super(entities);
+    this.query = entities.queryTag("enemy");
     this.enemyWaveSystem = enemyWaveSystem;
     this.tempBox = new THREE.Box3();
     this.collider = new THREE.Box3();
     this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
   }
   update() {
-    const entities = this.entities.queryTag("enemy");
-    if (!entities.length && !this.enemyWaveSystem.currentWave) {
+    if (!this.query.length && !this.enemyWaveSystem.currentWave) {
       APP.stopPlaying("You Win!");
       return;
     }
-    for (const entity of entities) {
+    for (const entity of this.query) {
       APP.updateBox(this.tempBox, entity.collider.collider, entity.mesh.mesh.matrixWorld);
       if (this.tempBox.intersectsBox(this.collider)) {
         APP.stopPlaying("Game Over");
