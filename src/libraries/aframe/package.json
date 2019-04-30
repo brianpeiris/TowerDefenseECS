@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "aframe": "^0.9.1"
+  }
+}

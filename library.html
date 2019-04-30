@@ -64,6 +64,9 @@
         border-color: grey;
       }
     </style>
+    <script><!--
+      document.write('<script src="/src/libraries/aframe/dist/main.js"></script>');
+    --></script>
   </head>
   <body>
     <h1 id="heading"></h1>
@@ -78,9 +81,9 @@
       const library = location.search.substring(1).split("&")[0];
       heading.textContent = library;
       document.title = library;
-      const script = document.createElement('script');
-      script.src = `/src/libraries/${library}/dist/main.js`;
-      document.body.append(script);
+      //const script = document.createElement('script');
+      //script.src = `/src/libraries/${library}/dist/main.js`;
+      //document.body.append(script);
     </script>
   </body>
 </html>

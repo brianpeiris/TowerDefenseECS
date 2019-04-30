@@ -3,6 +3,7 @@ const THREE = require("three");
 
 class App {
   constructor(update) {
+    /*
     this.scene = new THREE.Scene();
     const light = new THREE.DirectionalLight();
     light.position.x = 0.5;
@@ -28,12 +29,17 @@ class App {
       this.deviceSupportsHover = false;
     });
     document.addEventListener("mousemove", this._updateMouse.bind(this));
+    */
 
-    this.ui = {
-      info: document.getElementById("info"),
-      itemSelection: document.getElementById("itemSelection"),
-      power: document.getElementById("power")
-    };
+    document.addEventListener("DOMContentLoaded", () => {
+      this.ui = {
+        info: document.getElementById("info"),
+        itemSelection: document.getElementById("itemSelection"),
+        power: document.getElementById("power")
+      };
+      this._generateItemsUI();
+      this.items[0].input.checked = true;
+    });
 
     this.items = [
       { name: "mine", cost: 50 },
@@ -42,14 +48,12 @@ class App {
       { name: "collector", cost: 150 }
     ];
     this.itemsByName = {};
-    this._generateItemsUI();
-    this.items[0].input.checked = true;
     this.currentItem = this.items[0];
 
     this.deviceSupportsHover = true;
     this.placeholder = this.createBox("darkred", 1);
     this.placeholder.visible = false;
-    this.scene.add(this.placeholder);
+    //this.scene.add(this.placeholder);
     this.onCreate = () => {};
     document.addEventListener("mouseup", this._createItem.bind(this));
     document.addEventListener("touchend", ({ changedTouches }) => this._createItem(changedTouches[0]));
@@ -69,6 +73,7 @@ class App {
     }
     this.nextWaveIndex = 0;
 
+    /*
     const stats = new rStats({
       values: {
         frame: { average: true }
@@ -87,6 +92,7 @@ class App {
       stats("frame").end();
       stats().update();
     });
+    */
   }
 
   getCurrentWave(elapsed) {
