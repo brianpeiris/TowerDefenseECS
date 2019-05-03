@@ -3,10 +3,11 @@
 //
 
 const AFRAME = require("aframe");
+require("aframe-gridhelper-component");
 const THREE = AFRAME.THREE;
 const App = require("../../app.js");
 
-const APP = new App(update);
+const APP = new App();
 
 const scene = document.createElement("a-scene");
 scene.setAttribute("background", "color: black");
@@ -17,6 +18,29 @@ camera.setAttribute("camera", "");
 camera.setAttribute("position", "15 15 15");
 camera.setAttribute("rotation", "-20 52 -5");
 scene.append(camera);
+
+const floor = document.createElement("a-plane");
+floor.id = "floor";
+floor.setAttribute("width", 5);
+floor.setAttribute("height", 10);
+floor.object3D.position.set(0, -0.51, 0.5);
+floor.object3D.rotation.x = -Math.PI / 2;
+floor.addEventListener("raycaster-intersected", console.log);
+scene.append(floor);
+const frontGrid = document.createElement("a-entity");
+frontGrid.object3D.position.set(0, -0.5, 3);
+frontGrid.setAttribute("gridhelper", { divisions: 5 });
+scene.append(frontGrid);
+const backGrid = document.createElement("a-entity");
+backGrid.object3D.position.set(0, -0.5, -2);
+backGrid.setAttribute("gridhelper", { divisions: 5 });
+scene.append(backGrid);
+
+const raycaster = document.createElement("a-entity");
+raycaster.setAttribute("raycaster", { objects: "#floor" });
+raycaster.setAttribute("cursor", { rayOrigin: "mouse" });
+scene.append(raycaster);
+
 document.addEventListener("DOMContentLoaded", () => document.body.append(scene));
 
 //

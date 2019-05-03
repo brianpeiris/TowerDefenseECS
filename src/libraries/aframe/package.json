@@ -1,6 +1,7 @@
 {
   "private": true,
   "dependencies": {
-    "aframe": "^0.9.1"
+    "aframe": "^0.9.1",
+    "aframe-gridhelper-component": "^0.2.0"
   }
 }
