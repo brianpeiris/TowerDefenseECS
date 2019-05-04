@@ -162,18 +162,18 @@ AFRAME.registerSystem("placement-system", {
     this.updatePlacement();
   },
   updatePlacement() {
-    const intersection = scene.getIntersection();
-    if (!intersection) {
-      scene.updatePlacement(false);
-      return;
-    }
-    const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
     this.placementValid = !APP.currentItem.input.disabled;
-    for (const entity of document.querySelectorAll(".entity")) {
-      entity.object3D.getWorldPosition(this.worldPosition);
-      const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-      if (!entity.classList.contains("projectile") && x === ex && z === ez) {
-        this.placementValid = false;
+    let x, z;
+    const intersection = scene.getIntersection();
+    if (intersection) {
+      x = Math.round(intersection.point.x);
+      z = Math.round(intersection.point.z);
+      for (const entity of document.querySelectorAll(".entity")) {
+        entity.object3D.getWorldPosition(this.worldPosition);
+        const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
+        if (!entity.classList.contains("projectile") && x === ex && z === ez) {
+          this.placementValid = false;
+        }
       }
     }
     scene.updatePlacement(this.placementValid, x, z);
