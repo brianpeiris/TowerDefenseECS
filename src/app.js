@@ -1,5 +1,5 @@
 const rStats = require("rstatsjs/src/rStats.js");
-const THREE = require("three");
+// const THREE = require("three");
 
 class App {
   constructor(update) {
@@ -31,6 +31,8 @@ class App {
     document.addEventListener("mousemove", this._updateMouse.bind(this));
     */
 
+    this.power = 1500;
+
     document.addEventListener("DOMContentLoaded", () => {
       this.ui = {
         info: document.getElementById("info"),
@@ -51,12 +53,18 @@ class App {
     this.currentItem = this.items[0];
 
     this.deviceSupportsHover = true;
-    this.placeholder = this.createBox("darkred", 1);
-    this.placeholder.visible = false;
+    // this.placeholder = this.createBox("darkred", 1);
+    // this.placeholder.visible = false;
     //this.scene.add(this.placeholder);
     this.onCreate = () => {};
-    document.addEventListener("mouseup", this._createItem.bind(this));
-    document.addEventListener("touchend", ({ changedTouches }) => this._createItem(changedTouches[0]));
+    document.addEventListener("mouseup", e => {
+      if (e.target.nodeName !== "CANVAS") return;
+      this._createItem(e);
+    });
+    document.addEventListener("touchend", ({ target, changedTouches }) => {
+      if (target.nodeName !== "CANVAS") return;
+      this._createItem(changedTouches[0]);
+    });
 
     this.perfMode = location.search.includes("perf");
     if (this.perfMode) {
@@ -80,7 +88,6 @@ class App {
       }
     });
     const clock = new THREE.Clock();
-    this.playing = true;
     this.delta = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this.playing) return;
@@ -113,70 +120,70 @@ class App {
     return nextWave;
   }
 
-  updatePlacement(placementValid, x, z) {
-    this.placementValid = placementValid;
-    this.placeholder.visible = this.deviceSupportsHover && placementValid;
-    this.placeholder.position.set(x, 0, z);
-  }
+  // updatePlacement(placementValid, x, z) {
+  //   this.placementValid = placementValid;
+  //   this.placeholder.visible = this.deviceSupportsHover && placementValid;
+  //   this.placeholder.position.set(x, 0, z);
+  // }
 
-  createBox = (() => {
-    const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-    const materials = {};
-    return (color, size = 0.8) => {
-      if (!materials[color]) {
-        materials[color] = new THREE.MeshStandardMaterial({ color });
-      }
-      const mesh = new THREE.Mesh(boxGeometry, materials[color]);
-      mesh.scale.setScalar(size);
-      return mesh;
-    };
-  })();
+  // createBox = (() => {
+  //   const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+  //   const materials = {};
+  //   return (color, size = 0.8) => {
+  //     if (!materials[color]) {
+  //       materials[color] = new THREE.MeshStandardMaterial({ color });
+  //     }
+  //     const mesh = new THREE.Mesh(boxGeometry, materials[color]);
+  //     mesh.scale.setScalar(size);
+  //     return mesh;
+  //   };
+  // })();
 
-  getIntersection() {
-    if (!this.mouse) return null;
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    this.intersections.length = 0;
-    this.raycaster.intersectObject(this.floor, false, this.intersections);
-    if (this.intersections.length) {
-      return this.intersections[0];
-    } else {
-      return null;
-    }
-  }
+  // getIntersection() {
+  //   if (!this.mouse) return null;
+  //   this.raycaster.setFromCamera(this.mouse, this.camera);
+  //   this.intersections.length = 0;
+  //   this.raycaster.intersectObject(this.floor, false, this.intersections);
+  //   if (this.intersections.length) {
+  //     return this.intersections[0];
+  //   } else {
+  //     return null;
+  //   }
+  // }
 
-  updateBox = (() => {
-    const tempMatrix = new THREE.Matrix4();
-    return (box, collider, matrix) => {
-      tempMatrix.copyPosition(matrix);
-      box.copy(collider);
-      box.min.applyMatrix4(tempMatrix);
-      box.max.applyMatrix4(tempMatrix);
-    };
-  })();
+  // updateBox = (() => {
+  //   const tempMatrix = new THREE.Matrix4();
+  //   return (box, collider, matrix) => {
+  //     tempMatrix.copyPosition(matrix);
+  //     box.copy(collider);
+  //     box.min.applyMatrix4(tempMatrix);
+  //     box.max.applyMatrix4(tempMatrix);
+  //   };
+  // })();
 
   updatePower(power) {
-    this.ui.power.textContent = power.toFixed();
+    this.power += power;
+    this.ui.power.textContent = this.power.toFixed();
     for (const item of this.items) {
-      item.input.disabled = power < item.cost;
+      item.input.disabled = this.power < item.cost;
     }
   }
 
-  stopPlaying(reason) {
-    this.playing = false;
-    this.ui.info.textContent = reason;
+  setInfo(info) {
+    this.ui.info.textContent = info;
   }
 
   _createItem(e) {
-    this._updateMouse(e);
+    //this._updateMouse(e);
     const itemName = this.currentItem.name;
     this.onCreate(itemName, this.itemsByName[itemName].cost);
   }
 
-  _updateMouse(e) {
-    if (!this.mouse) this.mouse = new THREE.Vector2();
-    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
-  }
+  // _updateMouse(e) {
+  //   if (!this.mouse) this.mouse = new THREE.Vector2();
+  //   this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  //   this.mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
+  // }
 
   _selectItem(input, item) {
     if (input.disabled) return;
@@ -184,22 +191,22 @@ class App {
     this.currentItem = item;
   }
 
-  _createFloor() {
-    const floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 10), new THREE.MeshStandardMaterial());
-    floor.position.y = -0.51;
-    floor.position.z = 0.5;
-    floor.rotation.x = -Math.PI / 2;
-    this.scene.add(floor);
-    const frontGrid = new THREE.GridHelper(5, 5);
-    frontGrid.position.z = 3;
-    frontGrid.position.y = -0.5;
-    this.scene.add(frontGrid);
-    const backGrid = new THREE.GridHelper(5, 5);
-    backGrid.position.z = -2;
-    backGrid.position.y = -0.5;
-    this.scene.add(backGrid);
-    return floor;
-  }
+  // _createFloor() {
+  //   const floor = new THREE.Mesh(new THREE.PlaneBufferGeometry(5, 10), new THREE.MeshStandardMaterial());
+  //   floor.position.y = -0.51;
+  //   floor.position.z = 0.5;
+  //   floor.rotation.x = -Math.PI / 2;
+  //   this.scene.add(floor);
+  //   const frontGrid = new THREE.GridHelper(5, 5);
+  //   frontGrid.position.z = 3;
+  //   frontGrid.position.y = -0.5;
+  //   this.scene.add(frontGrid);
+  //   const backGrid = new THREE.GridHelper(5, 5);
+  //   backGrid.position.z = -2;
+  //   backGrid.position.y = -0.5;
+  //   this.scene.add(backGrid);
+  //   return floor;
+  // }
 
   _setSize() {
     this._renderer.setSize(window.innerWidth, window.innerHeight);

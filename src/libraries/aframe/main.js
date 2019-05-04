@@ -5,43 +5,11 @@
 const AFRAME = require("aframe");
 require("aframe-gridhelper-component");
 const THREE = AFRAME.THREE;
-const App = require("../../app.js");
+
+const { ascene: scene } = require("./scene");
+const App = require("../../app");
 
 const APP = new App();
-
-const scene = document.createElement("a-scene");
-scene.setAttribute("background", "color: black");
-scene.setAttribute("enemy-wave-system", "");
-scene.style.zIndex = -1;
-const camera = document.createElement("a-entity");
-camera.setAttribute("camera", "");
-camera.setAttribute("position", "15 15 15");
-camera.setAttribute("rotation", "-20 52 -5");
-scene.append(camera);
-
-const floor = document.createElement("a-plane");
-floor.id = "floor";
-floor.setAttribute("width", 5);
-floor.setAttribute("height", 10);
-floor.object3D.position.set(0, -0.51, 0.5);
-floor.object3D.rotation.x = -Math.PI / 2;
-floor.addEventListener("raycaster-intersected", console.log);
-scene.append(floor);
-const frontGrid = document.createElement("a-entity");
-frontGrid.object3D.position.set(0, -0.5, 3);
-frontGrid.setAttribute("gridhelper", { divisions: 5 });
-scene.append(frontGrid);
-const backGrid = document.createElement("a-entity");
-backGrid.object3D.position.set(0, -0.5, -2);
-backGrid.setAttribute("gridhelper", { divisions: 5 });
-scene.append(backGrid);
-
-const raycaster = document.createElement("a-entity");
-raycaster.setAttribute("raycaster", { objects: "#floor" });
-raycaster.setAttribute("cursor", { rayOrigin: "mouse" });
-scene.append(raycaster);
-
-document.addEventListener("DOMContentLoaded", () => document.body.append(scene));
 
 //
 // ECS Setup
@@ -91,17 +59,17 @@ AFRAME.registerComponent("collider", {
     const e1c = this.data;
     const e1m = e1.object3D;
     e1m.updateMatrixWorld();
-    APP.updateBox(this.tempBox1, this.collider, e1m.matrixWorld);
+    scene.updateBox(this.tempBox1, this.collider, e1m.matrixWorld);
     const colliders = this.el.sceneEl.querySelectorAll("[collider]");
     for (let i = 0; i < colliders.length; i++) {
       const e2 = colliders[i];
       if (e2 === e1) continue;
-      if (e1c.collides && e1c.collides !== e2.className) continue;
+      if (e1c.collides && !e2.classList.contains(e1c.collides)) continue;
       const e2c = e2.components.collider;
       if (!e2c.collider) continue;
       const e2m = e2.object3D;
       e2m.updateMatrixWorld();
-      APP.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
+      scene.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
       if (!this.tempBox1.intersectsBox(this.tempBox2)) continue;
       this.collided = e2;
       e2c.collided = e1;
@@ -159,32 +127,23 @@ AFRAME.registerComponent("vehicle", {
   }
 });
 
-function Collector() {
-  this.rate = 20;
-}
+AFRAME.registerComponent("collector", {
+  schema: {
+    rate: { default: 20 }
+  },
+  tick(time, delta) {
+    APP.updatePower(this.data.rate * (delta / 1000));
+  }
+});
 
 //
 // Systems
 //
 
-class ResourceSystem {
-  constructor(entities) {
-    this.query = entities.queryComponents([Collector]);
-    this.power = 150;
-  }
-  update(delta) {
-    for (const entity of this.query) {
-      this.power += entity.collector.rate * delta;
-    }
-    APP.updatePower(this.power);
-  }
-}
-
-class PlacementSystem {
-  constructor(entities, resourceSystem) {
-    this.query = entities.queryComponents([Mesh]);
-    this.resourceSystem = resourceSystem;
+AFRAME.registerSystem("placement-system", {
+  init() {
     this.worldPosition = new THREE.Vector3();
+    this.placementValid = false;
     this.factories = {
       mine: createMine,
       turret: createTurret,
@@ -193,40 +152,40 @@ class PlacementSystem {
     };
     APP.onCreate = (itemName, cost) => {
       this.updatePlacement();
-      if (!APP.placementValid) return;
+      if (!this.placementValid) return;
       let item = this.factories[itemName]();
-      this.resourceSystem.power -= cost;
-      item.mesh.mesh.position.copy(APP.placeholder.position);
+      APP.updatePower(-cost);
+      item.object3D.position.copy(scene.placeholder.object3D.position);
     };
-  }
-  update() {
+  },
+  tick() {
     this.updatePlacement();
-  }
+  },
   updatePlacement() {
-    const intersection = APP.getIntersection();
+    const intersection = scene.getIntersection();
     if (!intersection) {
-      APP.updatePlacement(false);
+      scene.updatePlacement(false);
       return;
     }
     const [x, z] = [Math.round(intersection.point.x), Math.round(intersection.point.z)];
-    let placementValid = !APP.currentItem.input.disabled;
-    for (const entity of this.query) {
-      entity.mesh.mesh.getWorldPosition(this.worldPosition);
+    this.placementValid = !APP.currentItem.input.disabled;
+    for (const entity of document.querySelectorAll(".entity")) {
+      entity.object3D.getWorldPosition(this.worldPosition);
       const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-      if (!entity.hasTag("projectile") && x === ex && z === ez) {
-        placementValid = false;
+      if (!entity.classList.contains("projectile") && x === ex && z === ez) {
+        this.placementValid = false;
       }
     }
-    APP.updatePlacement(placementValid, x, z);
+    scene.updatePlacement(this.placementValid, x, z);
   }
-}
+});
 
 AFRAME.registerSystem("enemy-wave-system", {
   init() {
     this.currentWave = APP.waves[0];
   },
-  tick(delta, elapsed) {
-    const currentWave = APP.getCurrentWave(elapsed);
+  tick(time) {
+    const currentWave = APP.getCurrentWave(time / 1000);
     if (currentWave === this.currentWave) return;
     this.currentWave = currentWave;
     this.generateWave(currentWave);
@@ -244,39 +203,32 @@ AFRAME.registerSystem("enemy-wave-system", {
   }
 });
 
-class GameOverSystem {
-  constructor(entities, enemyWaveSystem) {
-    this.query = entities.queryTag("enemy");
-    this.enemyWaveSystem = enemyWaveSystem;
-    this.tempBox = new THREE.Box3();
-    this.collider = new THREE.Box3();
-    this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
-  }
-  update() {
-    if (!this.query.length && !this.enemyWaveSystem.currentWave) {
-      APP.stopPlaying("You Win!");
-      return;
-    }
-    for (const entity of this.query) {
-      APP.updateBox(this.tempBox, entity.collider.collider, entity.mesh.mesh.matrixWorld);
-      if (this.tempBox.intersectsBox(this.collider)) {
-        APP.stopPlaying("Game Over");
-        break;
+if (!APP.perfMode) {
+  AFRAME.registerSystem("game-over-system", {
+    init() {
+      this.tempBox = new THREE.Box3();
+      this.collider = new THREE.Box3();
+      this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
+    },
+    tick() {
+      const enemies = document.querySelectorAll(".enemy");
+      if (!enemies.length && !this.sceneEl.systems["enemy-wave-system"].currentWave) {
+        scene.stop();
+        APP.setInfo("You Win!");
+        return;
+      }
+      for (const entity of enemies) {
+        if (!entity.components.collider.collider) continue;
+        scene.updateBox(this.tempBox, entity.components.collider.collider, entity.object3D.matrixWorld);
+        if (this.tempBox.intersectsBox(this.collider)) {
+          scene.stop();
+          APP.setInfo("Game Over");
+          break;
+        }
       }
     }
-  }
+  });
 }
-
-/*
-const resourceSystem = new ResourceSystem(entities);
-systems.push(resourceSystem);
-systems.push(new PlacementSystem(entities, resourceSystem));
-const enemyWaveSystem = new EnemyWaveSystem(entities);
-systems.push(enemyWaveSystem);
-if (!APP.perfMode) {
-  systems.push(new GameOverSystem(entities, enemyWaveSystem));
-}
-*/
 
 //
 // Entity factories
@@ -284,55 +236,56 @@ if (!APP.perfMode) {
 
 function createEnemy() {
   const entity = document.createElement("a-entity");
-  entity.className = "enemy";
+  entity.classList.add("entity", "enemy");
   entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
   entity.setAttribute("material", { color: "green" });
   entity.setAttribute("velocity", { z: 1.5 });
   entity.setAttribute("collider", { collider: "0.8 0.8 0.8" });
   entity.setAttribute("explosive", { destructible: false });
-  scene.append(entity);
+  scene.add(entity);
   return entity;
 }
 
 function createMine() {
-  const entity = entities.createEntity();
-  entity.addComponent(Mesh);
-  entity.mesh.mesh = APP.createBox("red");
-  entity.addComponent(Collider);
-  entity.collider.collides = "enemy";
-  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  entity.addComponent(Explosive);
-  APP.scene.add(entity.mesh.mesh);
+  const entity = document.createElement("a-entity");
+  entity.classList.add("entity");
+  entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
+  entity.setAttribute("material", { color: "red" });
+  entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
+  entity.setAttribute("explosive", "");
+  scene.add(entity);
   return entity;
 }
 
 function createProjectile() {
   const entity = document.createElement("a-entity");
-  //entity.addTag("projectile");
+  entity.classList.add("entity", "projectile");
   entity.setAttribute("geometry", { primitive: "box", width: 0.2, height: 0.2, depth: 0.2 });
   entity.setAttribute("material", { color: "red" });
   entity.setAttribute("gravity", "");
   entity.setAttribute("velocity", { z: -20 });
   entity.setAttribute("collider", { collider: "0.2 0.2 0.2", collides: "enemy" });
   entity.setAttribute("explosive", "");
-  scene.append(entity);
+  scene.add(entity);
   return entity;
 }
 
-function createTurret(withCollider = true, firingRate) {
+function createTurret(addToScene = true, firingRate) {
   const entity = document.createElement("a-entity");
+  entity.classList.add("entity");
   entity.setAttribute("turret", { firingRate });
   entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
   entity.setAttribute("material", { color: "blue" });
-  if (withCollider) {
-    entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
+  entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
+  if (addToScene) {
+    scene.add(entity);
   }
-  scene.append(entity);
   return entity;
 }
 
 function createTurretVehicle() {
   const entity = document.createElement("a-entity");
+  entity.classList.add("entity");
   entity.setAttribute("vehicle", "");
   entity.setAttribute("geometry", { primitive: "box", width: 0.9, height: 0.9, depth: 0.9 });
   entity.setAttribute("material", { color: "yellow" });
@@ -340,19 +293,18 @@ function createTurretVehicle() {
   const turret = createTurret(false, 1);
   turret.object3D.position.y = 0.5;
   entity.append(turret);
-  scene.append(entity);
+  scene.add(entity);
   return entity;
 }
 
 function createCollector() {
-  const entity = entities.createEntity();
-  entity.addComponent(Collector);
-  entity.addComponent(Mesh);
-  entity.mesh.mesh = APP.createBox("orange");
-  entity.addComponent(Collider);
-  entity.collider.collides = "enemy";
-  entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  APP.scene.add(entity.mesh.mesh);
+  const entity = document.createElement("a-entity");
+  entity.classList.add("entity");
+  entity.setAttribute("collector", "");
+  entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
+  entity.setAttribute("material", { color: "orange" });
+  entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
+  scene.add(entity);
   return entity;
 }
 
