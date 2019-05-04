@@ -2,10 +2,11 @@
 // App Boilerplate
 //
 
-const THREE = require("three");
 const { EntityManager } = require("tiny-ecs");
-const Scene = require("../../three-scene.js");
+
+const THREE = require("three");
 const App = require("../../app.js");
+const Scene = require("../../three-scene.js");
 
 const APP = new App();
 const scene = new Scene(update);
@@ -222,6 +223,8 @@ class PlacementSystem {
           this.placementValid = false;
         }
       }
+    } else {
+      this.placementValid = false;
     }
     scene.updatePlacement(APP.deviceSupportsHover && this.placementValid, x, z);
   }
@@ -420,7 +423,7 @@ function createCollector() {
 if (APP.perfMode) {
   for (let i = 0; i < 5; i++) {
     for (let j = 0; j < 4; j++) {
-      const turret = createMine();
+      const turret = createTurretVehicle();
       turret.mesh.mesh.position.set(i - 2, 0, j + 2);
     }
   }

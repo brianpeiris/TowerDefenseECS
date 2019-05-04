@@ -28,22 +28,25 @@ class Scene {
     this._scene.add(this.placeholder);
 
     const clock = new THREE.Clock();
-    let delta = 0;
+    this.delta = 0;
+    this.elapsed = 0;
+    this._playing = false;
+    this._renderer.setAnimationLoop(() => {
+      if (!this._playing) return;
+      //stats("frame").start();
+      this.delta = clock.getDelta();
+      this.elapsed = clock.elapsedTime;
+      update(this.delta, this.elapsed);
+      this._renderer.render(this._scene, this._camera);
+      //stats("frame").end();
+      //stats().update();
+    });
 
     this._setSize();
     document.addEventListener("mousemove", this._updateMouse.bind(this));
     document.addEventListener("DOMContentLoaded", () => {
       document.body.append(this._renderer.domElement);
-      this._renderer.setAnimationLoop(() => {
-        //if (!playing) return;
-        //stats("frame").start();
-        delta = clock.getDelta();
-        const elapsed = clock.elapsedTime;
-        update(delta, elapsed);
-        this._renderer.render(this._scene, this._camera);
-        //stats("frame").end();
-        //stats().update();
-      });
+      this._playing = true;
     });
     window.addEventListener("resize", this._setSize);
   }
@@ -111,6 +114,9 @@ class Scene {
   updatePlacement = (placementValid, x, z) => {
     this.placeholder.visible = placementValid;
     this.placeholder.position.set(x, 0, z);
+  };
+  stop = () => {
+    this._playing = false;
   };
 }
 module.exports = Scene;
