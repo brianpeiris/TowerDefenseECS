@@ -124,4 +124,5 @@ class Scene {
     this._playing = false;
   };
 }
+
 module.exports = Scene;

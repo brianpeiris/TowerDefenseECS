@@ -5,10 +5,11 @@
 const AFRAME = require("aframe");
 const THREE = AFRAME.THREE;
 
-const { ascene: scene } = require("./scene");
-const App = require("../../app");
+const App = require("../../app.js");
+const Scene = require("./scene.js");
 
 const APP = new App();
+const scene = new Scene();
 
 //
 // ECS Setup
@@ -184,8 +185,10 @@ AFRAME.registerSystem("placement-system", {
           this.placementValid = false;
         }
       }
+    } else {
+      this.placementValid = false;
     }
-    scene.updatePlacement(this.placementValid, x, z);
+    scene.updatePlacement(APP.deviceSupportsHover && this.placementValid, x, z);
   }
 });
 
