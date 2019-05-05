@@ -65,10 +65,13 @@
         border-color: grey;
       }
     </style>
-    <script><!--
+    <script>
+      //<!--
       const library = location.search.substring(1).split("&")[0];
+      // Using document.write since aframe needs to be loaded before the HTML body is parsed.
       document.write(`<script src="/src/libraries/${library}/dist/main.js"></script>`);
-    --></script>
+      //-->
+    </script>
   </head>
   <body>
     <h1 id="heading"></h1>
@@ -82,9 +85,6 @@
     <script>
       heading.textContent = library;
       document.title = library;
-      //const script = document.createElement('script');
-      //script.src = `/src/libraries/${library}/dist/main.js`;
-      //document.body.append(script);
     </script>
   </body>
 </html>
