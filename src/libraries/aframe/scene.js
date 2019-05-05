@@ -38,16 +38,32 @@ class Scene {
     this._scene.append(this.placeholder);
 
     let stats;
+    let sampleCount = 0;
+    let averageDuration = 0;
+    this.frame = 0;
+    this.averageFrame = 0;
     AFRAME.registerComponent("rstats", {
-      tick: () => {
-        stats("frame").tick();
+      tick: (time, delta) => {
+        this.frame++;
+        sampleCount++;
+        averageDuration += delta;
+        if (sampleCount === 10) {
+          this.averageFrame = Math.round(averageDuration / sampleCount);
+          stats("frame").set(this.averageFrame);
+          sampleCount = 0;
+          averageDuration = 0;
+        }
+        if (this.frame === 350) {
+          this.stop();
+          console.log(this.averageFrame);
+        }
         stats().update();
       }
     });
     this._scene.setAttribute("rstats", "");
 
     document.addEventListener("DOMContentLoaded", () => {
-      stats = new rStats({ values: { frame: { caption: "(ms)", average: true } } });
+      this.stats = stats = new rStats({ values: { frame: { caption: "(ms)" } } });
       stats().element.className = "tde-rs-base";
       document.body.insertBefore(this._scene, document.body.children[0]);
     });

@@ -22,7 +22,7 @@ AFRAME.registerComponent("velocity", {
     z: { default: 0 }
   },
   tick(time, delta) {
-    const deltaSeconds = delta / 1000;
+    const deltaSeconds = 30 / 1000;
     this.el.object3D.position.x += this.data.x * deltaSeconds;
     this.el.object3D.position.y += this.data.y * deltaSeconds;
     this.el.object3D.position.z += this.data.z * deltaSeconds;
@@ -34,7 +34,7 @@ AFRAME.registerComponent("gravity", {
     force: { default: -9.8 }
   },
   tick(time, delta) {
-    const newVelocityY = this.el.getAttribute("velocity").y + this.data.force * (delta / 1000);
+    const newVelocityY = this.el.getAttribute("velocity").y + this.data.force * (30 / 1000);
     this.el.setAttribute("velocity", "y", newVelocityY);
   }
 });
@@ -45,8 +45,6 @@ AFRAME.registerComponent("collider", {
     collides: { type: "string" }
   },
   init() {
-    const c = this.data.collider;
-    this.collider = new THREE.Box3({ x: -c.x / 2, y: -c.y / 2, z: -c.z / 2 }, { x: c.x / 2, y: c.y / 2, z: c.z / 2 });
     this.collided = null;
   }
 });
@@ -58,12 +56,18 @@ AFRAME.registerComponent("explosive", {
   tick() {
     const { collided } = this.el.components.collider;
     const explosiveBelowFloor = this.el.object3D.position.y <= -0.5;
-    if ((explosiveBelowFloor || (collided && this.data.destructible)) && this.el.parentElement) {
-      this.el.parentElement.removeChild(this.el);
+    if (explosiveBelowFloor || (collided && this.data.destructible)) {
+      this.el.setAttribute("toremove", "");
     }
-    if (collided && collided.parentElement) {
-      collided.parentElement.removeChild(collided);
+    if (collided) {
+      collided.setAttribute("toremove", "");
     }
+  }
+});
+
+AFRAME.registerComponent("toremove", {
+  tick() {
+    this.el.parentElement.removeChild(this.el);
   }
 });
 
@@ -75,7 +79,7 @@ AFRAME.registerComponent("turret", {
     this.timeUntilFire = 1 / this.data.firingRate;
   },
   tick(time, delta) {
-    this.timeUntilFire -= delta / 1000;
+    this.timeUntilFire -= 30 / 1000;
     if (this.timeUntilFire <= 0) {
       const projectile = createProjectile();
       this.el.object3D.getWorldPosition(projectile.object3D.position);
@@ -97,7 +101,7 @@ AFRAME.registerComponent("vehicle", {
       position.x = Math.sign(position.x) * 2;
       this.speed *= -1;
     }
-    position.x += this.speed * (delta / 1000);
+    position.x += this.speed * (30 / 1000);
   }
 });
 
@@ -106,7 +110,7 @@ AFRAME.registerComponent("collector", {
     rate: { default: 20 }
   },
   tick(time, delta) {
-    APP.updatePower(this.data.rate * (delta / 1000));
+    APP.updatePower(this.data.rate * (30 / 1000));
   }
 });
 
@@ -115,33 +119,24 @@ AFRAME.registerComponent("collector", {
 //
 
 AFRAME.registerSystem("collision-system", {
-  init() {
-    this.tempBox1 = new THREE.Box3();
-    this.tempBox2 = new THREE.Box3();
-  },
   tick() {
-    const entities = document.querySelectorAll("[collider]");
+    const entities = Array.from(document.querySelectorAll("[collider]"));
     for (const entity of entities) {
       entity.components.collider.collided = null;
+      entity.object3D.updateMatrixWorld();
+      scene.updateBox(entity.offsetCollider, entity.collider, entity.object3D.matrixWorld);
     }
-    for (let i = 0; i < entities.length; i++) {
+    const len = entities.length;
+    for (let i = 0; i < len; i++) {
       const e1 = entities[i];
       const e1c = e1.components.collider;
-      if (!e1c.collider) continue;
-      const e1m = e1.object3D;
-      e1m.updateMatrixWorld();
-      scene.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
-      for (let j = i + 1; j < entities.length; j++) {
+      if (!e1c.data) continue;
+      for (let j = i + 1; j < len; j++) {
         const e2 = entities[j];
         if (e1c.data.collides && !e2.classList.contains(e1c.data.collides)) continue;
-        const e2c = e2.components.collider;
-        if (!e2c.collider) continue;
-        const e2m = e2.object3D;
-        e2m.updateMatrixWorld();
-        scene.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
-        if (!this.tempBox1.intersectsBox(this.tempBox2)) continue;
+        if (!e1.offsetCollider.intersectsBox(e2.offsetCollider)) continue;
         e1c.collided = e2;
-        e2c.collided = e1;
+        e2.components.collider.collided = e1;
       }
     }
   }
@@ -204,7 +199,7 @@ AFRAME.registerSystem("enemy-wave-system", {
     const occupied = {};
     for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
-      const lane = THREE.Math.randInt(-2, 2);
+      const lane = (i % 5) - 2;
       enemy.object3D.position.x = lane;
       occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
       enemy.object3D.position.z = occupied[lane] - 5;
@@ -250,6 +245,8 @@ function createEnemy() {
   entity.setAttribute("material", { color: "green" });
   entity.setAttribute("velocity", { z: 1.5 });
   entity.setAttribute("collider", { collider: "0.8 0.8 0.8" });
+  entity.collider = new THREE.Box3({ x: -0.8 / 2, y: -0.8 / 2, z: -0.8 / 2 }, { x: 0.8 / 2, y: 0.8 / 2, z: 0.8 / 2 });
+  entity.offsetCollider = new THREE.Box3();
   entity.setAttribute("explosive", { destructible: false });
   scene.add(entity);
   return entity;
@@ -274,6 +271,8 @@ function createProjectile() {
   entity.setAttribute("gravity", "");
   entity.setAttribute("velocity", { z: -20 });
   entity.setAttribute("collider", { collider: "0.2 0.2 0.2", collides: "enemy" });
+  entity.collider = new THREE.Box3({ x: -0.2 / 2, y: -0.2 / 2, z: -0.2 / 2 }, { x: 0.2 / 2, y: 0.2 / 2, z: 0.2 / 2 });
+  entity.offsetCollider = new THREE.Box3();
   entity.setAttribute("explosive", "");
   scene.add(entity);
   return entity;
@@ -287,6 +286,8 @@ function createTurret(standalone = true, firingRate) {
   entity.setAttribute("material", { color: "blue" });
   if (standalone) {
     entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
+    entity.collider = new THREE.Box3({ x: -0.8 / 2, y: -0.8 / 2, z: -0.8 / 2 }, { x: 0.8 / 2, y: 0.8 / 2, z: 0.8 / 2 });
+    entity.offsetCollider = new THREE.Box3();
     scene.add(entity);
   }
   return entity;
@@ -299,6 +300,8 @@ function createTurretVehicle() {
   entity.setAttribute("geometry", { primitive: "box", width: 0.9, height: 0.9, depth: 0.9 });
   entity.setAttribute("material", { color: "yellow" });
   entity.setAttribute("collider", { collider: "0.9 0.9 0.9", collides: "enemy" });
+  entity.collider = new THREE.Box3({ x: -0.9 / 2, y: -0.9 / 2, z: -0.9 / 2 }, { x: 0.9 / 2, y: 0.9 / 2, z: 0.9 / 2 });
+  entity.offsetCollider = new THREE.Box3();
   const turret = createTurret(false, 1);
   turret.object3D.position.y = 0.5;
   entity.append(turret);
