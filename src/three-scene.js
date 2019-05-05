@@ -1,4 +1,5 @@
 const THREE = require("three");
+const rStats = require("rstatsjs/src/rStats.js");
 
 class Scene {
   constructor(update) {
@@ -27,24 +28,27 @@ class Scene {
     this.placeholder.visible = false;
     this._scene.add(this.placeholder);
 
+    let stats;
+
     const clock = new THREE.Clock();
     this.delta = 0;
     this.elapsed = 0;
     this._playing = false;
     this._renderer.setAnimationLoop(() => {
       if (!this._playing) return;
-      //stats("frame").start();
       this.delta = clock.getDelta();
       this.elapsed = clock.elapsedTime;
       update(this.delta, this.elapsed);
       this._renderer.render(this._scene, this._camera);
-      //stats("frame").end();
-      //stats().update();
+      stats("frame").tick();
+      stats().update();
     });
 
     this._setSize();
     document.addEventListener("mousemove", this._updateMouse.bind(this));
     document.addEventListener("DOMContentLoaded", () => {
+      stats = new rStats({ values: { frame: { average: true } } });
+      stats().element.className = "tde-rs-base";
       document.body.append(this._renderer.domElement);
       this._playing = true;
     });

@@ -1,9 +1,10 @@
 const AFRAME = require("aframe");
 const THREE = AFRAME.THREE;
+const rStats = require("rstatsjs/src/rStats.js");
 
 const scene = document.createElement("a-scene");
 scene.setAttribute("background", "color: black");
-scene.setAttribute("debug", "");
+scene.setAttribute("vr-mode-ui", "enabled: false");
 scene.style.position = "absolute";
 const camera = document.createElement("a-entity");
 camera.setAttribute("camera", "");
@@ -37,7 +38,20 @@ placeholder.setAttribute("geometry", { primitive: "box", width: 1, height: 1, de
 placeholder.setAttribute("material", { color: "darkred" });
 scene.append(placeholder);
 
-document.addEventListener("DOMContentLoaded", () => document.body.insertBefore(scene, document.body.children[0]));
+let stats;
+AFRAME.registerComponent("rstats", {
+  tick: () => {
+    stats("frame").tick();
+    stats().update();
+  }
+});
+scene.setAttribute("rstats", "");
+
+document.addEventListener("DOMContentLoaded", () => {
+  stats = new rStats({ values: { frame: { average: true } } });
+  stats().element.className = "tde-rs-base";
+  document.body.insertBefore(scene, document.body.children[0]);
+});
 
 export const ascene = {
   add: entity => {

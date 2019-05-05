@@ -1,6 +1,3 @@
-// const rStats = require("rstatsjs/src/rStats.js");
-// const THREE = require("three");
-
 class App {
   constructor() {
     document.addEventListener("touchstart", () => {
@@ -41,7 +38,7 @@ class App {
 
     this.perfMode = location.search.includes("perf");
     if (this.perfMode) {
-      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 100 }];
+      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 500 }];
     } else {
       this.waves = [
         { time: 0, enemies: 0 },
@@ -53,14 +50,6 @@ class App {
       ];
     }
     this.nextWaveIndex = 0;
-
-    /*
-    const stats = new rStats({
-      values: {
-        frame: { average: true }
-      }
-    });
-    */
   }
 
   getCurrentWave(elapsed) {
@@ -69,9 +58,9 @@ class App {
     const nextWaveTime = nextWave && nextWave.time;
 
     if (nextWave) {
-      if (this.ui) this.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
+      this.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
     } else {
-      if (this.ui) this.ui.info.textContent = "Final Wave!";
+      this.ui.info.textContent = "Final Wave!";
     }
 
     const currentWave = this.waves[this.nextWaveIndex - 1];
@@ -83,7 +72,7 @@ class App {
 
   updatePower(power) {
     this.power += power;
-    if (this.ui) this.ui.power.textContent = this.power.toFixed();
+    this.ui.power.textContent = this.power.toFixed();
     for (const item of this.items) {
       if (item.input) item.input.disabled = this.power < item.cost;
     }
@@ -94,7 +83,6 @@ class App {
   }
 
   _createItem(e) {
-    //this._updateMouse(e);
     const itemName = this.currentItem.name;
     this.onCreate(itemName, this.itemsByName[itemName].cost);
   }

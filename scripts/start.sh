@@ -15,6 +15,6 @@ else
 		npx webpack "$libraryDirectory/main.js" -o "$libraryDirectory/dist/main.js" --mode development -w &
 	done
 fi
-npx browser-sync start -s --no-open --no-notify --no-ghost-ui --files '*.html' --files 'src/libraries/*/dist/main.js' &
+npx browser-sync start -s --no-open --no-notify --no-ghost-mode --files '*.html' --files 'src/libraries/*/dist/main.js' &
 trap 'trap - SIGTERM && kill 0' SIGINT SIGTERM EXIT
 wait
