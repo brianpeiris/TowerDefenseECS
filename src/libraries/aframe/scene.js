@@ -1,15 +1,17 @@
 const AFRAME = require("aframe");
 const THREE = AFRAME.THREE;
+require("aframe-gridhelper-component");
 const rStats = require("rstatsjs/src/rStats.js");
 
 const scene = document.createElement("a-scene");
 scene.setAttribute("background", "color: black");
 scene.setAttribute("vr-mode-ui", "enabled: false");
 scene.style.position = "absolute";
+
 const camera = document.createElement("a-entity");
-camera.setAttribute("camera", "");
+camera.setAttribute("camera", "fov: 50");
 camera.setAttribute("position", "15 15 15");
-camera.setAttribute("rotation", "-20 52 -5");
+camera.setAttribute("rotation", "-25 45 -5");
 scene.append(camera);
 
 const floor = document.createElement("a-plane");
@@ -21,11 +23,11 @@ floor.object3D.rotation.x = -Math.PI / 2;
 scene.append(floor);
 const frontGrid = document.createElement("a-entity");
 frontGrid.object3D.position.set(0, -0.5, 3);
-frontGrid.setAttribute("gridhelper", { divisions: 5 });
+frontGrid.setAttribute("gridhelper", { divisions: 5, colorGrid: 0x888888 });
 scene.append(frontGrid);
 const backGrid = document.createElement("a-entity");
 backGrid.object3D.position.set(0, -0.5, -2);
-backGrid.setAttribute("gridhelper", { divisions: 5 });
+backGrid.setAttribute("gridhelper", { divisions: 5, colorGrid: 0x888888 });
 scene.append(backGrid);
 
 const raycaster = document.createElement("a-entity");

@@ -3,7 +3,6 @@
 //
 
 const AFRAME = require("aframe");
-require("aframe-gridhelper-component");
 const THREE = AFRAME.THREE;
 
 const { ascene: scene } = require("./scene");
