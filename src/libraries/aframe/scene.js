@@ -73,13 +73,6 @@ class Scene {
   add = entity => {
     this._scene.append(entity);
   };
-  getIntersection = () => {
-    return this._raycaster.components.raycaster.getIntersection(this._floor);
-  };
-  updatePlacement = (placementValid, x, z) => {
-    this.placeholder.setAttribute("visible", placementValid);
-    this.placeholder.object3D.position.set(x, 0, z);
-  };
   updateBox = (() => {
     const tempMatrix = new THREE.Matrix4();
     return (box, collider, matrix) => {
@@ -89,6 +82,13 @@ class Scene {
       box.max.applyMatrix4(tempMatrix);
     };
   })();
+  getIntersection = () => {
+    return this._raycaster.components.raycaster.getIntersection(this._floor);
+  };
+  updatePlacement = (placementValid, x, z) => {
+    this.placeholder.setAttribute("visible", placementValid);
+    this.placeholder.object3D.position.set(x, 0, z);
+  };
   stop = () => {
     this._scene.pause();
     this._scene.renderer.setAnimationLoop(null);
