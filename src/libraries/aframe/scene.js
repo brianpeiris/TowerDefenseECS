@@ -4,9 +4,19 @@ require("aframe-gridhelper-component");
 const rStats = require("rstatsjs/src/rStats.js");
 
 const scene = document.createElement("a-scene");
+scene.setAttribute("renderer", "antialias: true");
 scene.setAttribute("background", "color: black");
 scene.setAttribute("vr-mode-ui", "enabled: false");
 scene.style.position = "absolute";
+window.scene = scene;
+
+const light = document.createElement("a-entity");
+light.setAttribute("light", "type: directional");
+light.setAttribute("position", "0.5 1 -1");
+scene.append(light);
+const ambient = document.createElement("a-entity");
+ambient.setAttribute("light", "type: ambient; intensity: 0.5;");
+scene.append(ambient);
 
 const camera = document.createElement("a-entity");
 camera.setAttribute("camera", "fov: 50");

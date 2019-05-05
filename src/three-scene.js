@@ -4,6 +4,7 @@ const rStats = require("rstatsjs/src/rStats.js");
 class Scene {
   constructor(update) {
     this._scene = new THREE.Scene();
+    window.scene = this._scene;
 
     const light = new THREE.DirectionalLight();
     light.position.x = 0.5;
