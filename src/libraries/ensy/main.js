@@ -45,7 +45,8 @@ manager.addComponent("Collider", {
   state: {
     collider: null,
     collides: null,
-    collided: null
+    collided: null,
+    offsetCollider: null
   }
 });
 
@@ -120,30 +121,26 @@ class VelocityProcessor extends Processor {
 class CollisionProcessor extends Processor {
   constructor(entities) {
     super(entities);
-    this.tempBox1 = new THREE.Box3();
-    this.tempBox2 = new THREE.Box3();
   }
   update() {
     const entities = this.manager.getComponentsData("Collider");
     if (!entities) return;
     const entityIds = Object.keys(entities);
     for (const entityId in entities) {
-      entities[entityId].collided = null;
+      const ec = entities[entityId];
+      ec.collided = null;
+      const em = this.manager.getComponentDataForEntity("Mesh", entityId).mesh;
+      em.updateMatrixWorld();
+      scene.updateBox(ec.offsetCollider, ec.collider, em.matrixWorld);
     }
     for (let i = 0; i < entityIds.length; i++) {
       const e1 = entityIds[i];
       const e1c = entities[e1];
-      const e1m = this.manager.getComponentDataForEntity("Mesh", e1).mesh;
-      e1m.updateMatrixWorld();
-      scene.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
       for (let j = i + 1; j < entityIds.length; j++) {
         const e2 = entityIds[j];
         if (e1c.collides && !this.manager.entityHasComponent(e2, e1c.collides)) continue;
         const e2c = entities[e2];
-        const e2m = this.manager.getComponentDataForEntity("Mesh", e2).mesh;
-        e2m.updateMatrixWorld();
-        scene.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
-        if (!this.tempBox1.intersectsBox(this.tempBox2)) continue;
+        if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
         e1c.collided = e2;
         e2c.collided = e1;
       }
@@ -369,7 +366,10 @@ function createEnemy() {
   const mesh = scene.createBox("green");
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
   manager.updateComponentDataForEntity("Velocity", entityId, { z: 1.5 });
-  manager.updateComponentDataForEntity("Collider", entityId, { collider: new THREE.Box3().setFromObject(mesh) });
+  manager.updateComponentDataForEntity("Collider", entityId, {
+    collider: new THREE.Box3().setFromObject(mesh),
+    offsetCollider: new THREE.Box3()
+  });
   manager.updateComponentDataForEntity("Explosive", entityId, { destructible: false });
   scene.add(mesh);
   return entityId;
@@ -381,6 +381,7 @@ function createMine() {
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
   manager.updateComponentDataForEntity("Collider", entityId, {
     collider: new THREE.Box3().setFromObject(mesh),
+    offsetCollider: new THREE.Box3(),
     collides: "Enemy"
   });
   manager.updateComponentDataForEntity("Explosive", entityId);
@@ -394,6 +395,7 @@ function createProjectile() {
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
   manager.updateComponentDataForEntity("Collider", entityId, {
     collider: new THREE.Box3().setFromObject(mesh),
+    offsetCollider: new THREE.Box3(),
     collides: "Enemy"
   });
   manager.updateComponentDataForEntity("Explosive", entityId);
@@ -413,6 +415,7 @@ function createTurret(withCollider = true, firingRate) {
     manager.addComponentsToEntity(["Collider"], entityId);
     manager.updateComponentDataForEntity("Collider", entityId, {
       collider: new THREE.Box3().setFromObject(mesh),
+      offsetCollider: new THREE.Box3(),
       collides: "Enemy"
     });
   }
@@ -426,6 +429,7 @@ function createTurretVehicle() {
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
   manager.updateComponentDataForEntity("Collider", entityId, {
     collider: new THREE.Box3().setFromObject(mesh),
+    offsetCollider: new THREE.Box3(),
     collides: "Enemy"
   });
   const turret = createTurret(false, 1);
@@ -443,6 +447,7 @@ function createCollector() {
   manager.updateComponentDataForEntity("Mesh", entityId, { mesh });
   manager.updateComponentDataForEntity("Collider", entityId, {
     collider: new THREE.Box3().setFromObject(mesh),
+    offsetCollider: new THREE.Box3(),
     collides: "Enemy"
   });
   scene.add(mesh);

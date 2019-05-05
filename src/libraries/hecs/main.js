@@ -49,6 +49,7 @@ class Collider {
     this.collider = collider;
     this.collides = collides;
     this.collided = null;
+    this.offsetCollider = new THREE.Box3();
   }
 }
 world.registerComponent(Collider, new SparseArrayComponentStorage());
@@ -131,30 +132,26 @@ class VelocitySystem extends System {
 class CollisionSystem extends System {
   constructor() {
     super();
-    this.tempBox1 = new THREE.Box3();
-    this.tempBox2 = new THREE.Box3();
   }
   setup() {
     return {
+      entities: world.createQuery(Write(Collider), Read(Mesh)),
       e1: world.createQuery(Write(Collider), EntityId, Read(Mesh)),
       e2: world.createQuery(Write(Collider), EntityId, Read(Mesh))
     };
   }
   update() {
-    for (const [collider] of this.ctx.e1) {
+    for (const [collider, mesh] of this.ctx.entities) {
       collider.collided = null;
+      mesh.mesh.updateMatrixWorld();
+      scene.updateBox(collider.offsetCollider, collider.collider, mesh.mesh.matrixWorld);
     }
     let i = 0;
-    let j = 0;
-    for (const [c1, e1, m1] of this.ctx.e1) {
-      m1.mesh.updateMatrixWorld();
-      scene.updateBox(this.tempBox1, c1.collider, m1.mesh.matrixWorld);
-      j = 0;
-      for (const [c2, e2, m2] of this.ctx.e2) {
-        if (j < i && (c1.collides === null || world.hasComponent(e2, c1.collides))) {
-          m2.mesh.updateMatrixWorld();
-          scene.updateBox(this.tempBox2, c2.collider, m2.mesh.matrixWorld);
-          if (this.tempBox1.intersectsBox(this.tempBox2)) {
+    for (const [c1, e1] of this.ctx.e1) {
+      let j = 0;
+      for (const [c2, e2] of this.ctx.e2) {
+        if (j > i && (c1.collides === null || world.hasComponent(e2, c1.collides))) {
+          if (c1.offsetCollider.intersectsBox(c2.offsetCollider)) {
             c1.collided = e2;
             c2.collided = e1;
           }

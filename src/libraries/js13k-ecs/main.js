@@ -33,6 +33,7 @@ function Collider(collider, collides) {
   this.collider = collider;
   this.collides = collides;
   this.collided = null;
+  this.offsetCollider = new THREE.Box3();
 }
 
 function Explosive(destructible = true) {
@@ -99,21 +100,20 @@ class VelocitySystem {
 class CollisionSystem {
   constructor() {
     this.query = ecs.select(Mesh, Collider);
-    this.tempBox1 = new THREE.Box3();
-    this.tempBox2 = new THREE.Box3();
   }
   update() {
     this.query.iterate(entity => {
-      entity.get(Collider).collided = null;
+      const ec = entity.get(Collider);
+      ec.collided = null;
+      const em = entity.get(Mesh).mesh;
+      em.updateMatrixWorld();
+      scene.updateBox(ec.offsetCollider, ec.collider, em.matrixWorld);
     });
 
     let e1n = this.query.list;
     while (e1n) {
       const e1 = e1n.entity;
       const e1c = e1.get(Collider);
-      const e1m = e1.get(Mesh).mesh;
-      e1m.updateMatrixWorld();
-      scene.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
       let e2n = e1n.next;
       while (e2n) {
         const e2 = e2n.entity;
@@ -122,10 +122,7 @@ class CollisionSystem {
           continue;
         }
         const e2c = e2.get(Collider);
-        const e2m = e2.get(Mesh).mesh;
-        e2m.updateMatrixWorld();
-        scene.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
-        if (this.tempBox1.intersectsBox(this.tempBox2)) {
+        if (e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) {
           e1c.collided = e2;
           e2c.collided = e1;
         }
