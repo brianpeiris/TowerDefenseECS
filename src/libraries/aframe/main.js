@@ -12,10 +12,6 @@ const APP = new App();
 const scene = new Scene();
 
 //
-// ECS Setup
-//
-
-//
 // Components
 //
 
@@ -51,6 +47,7 @@ AFRAME.registerComponent("collider", {
   init() {
     const c = this.data.collider;
     this.collider = new THREE.Box3({ x: -c.x / 2, y: -c.y / 2, z: -c.z / 2 }, { x: c.x / 2, y: c.y / 2, z: c.z / 2 });
+    this.collided = null;
   }
 });
 

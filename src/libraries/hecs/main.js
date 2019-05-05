@@ -232,9 +232,8 @@ class ResourceSystem extends System {
 }
 
 class PlacementSystem extends System {
-  constructor(resourceSystem) {
+  constructor() {
     super();
-    this.resourceSystem = resourceSystem;
     this.worldPosition = new THREE.Vector3();
     this.placementValid = false;
     this.factories = {
@@ -382,9 +381,8 @@ world.registerSystem(new CollisionSystem());
 world.registerSystem(new ExplosiveSystem());
 world.registerSystem(new OnboardRemover());
 world.registerSystem(new MeshRemover());
-const resourceSystem = new ResourceSystem();
-world.registerSystem(resourceSystem);
-world.registerSystem(new PlacementSystem(resourceSystem));
+world.registerSystem(new ResourceSystem());
+world.registerSystem(new PlacementSystem());
 world.registerSystem(new TurretSystem());
 world.registerSystem(new VehicleSystem());
 const enemyWaveSystem = new EnemyWaveSystem();

@@ -198,8 +198,7 @@ class ResourceSystem {
 }
 
 class PlacementSystem {
-  constructor(resourceSystem) {
-    this.resourceSystem = resourceSystem;
+  constructor() {
     this.query = ecs.select(Mesh);
     this.worldPosition = new THREE.Vector3();
     this.placementValid = false;
@@ -333,9 +332,8 @@ systems.push(new CollisionSystem());
 systems.push(new ExplosiveSystem());
 systems.push(new OnboardRemover());
 systems.push(new MeshRemover());
-const resourceSystem = new ResourceSystem();
-systems.push(resourceSystem);
-systems.push(new PlacementSystem(resourceSystem));
+systems.push(new ResourceSystem());
+systems.push(new PlacementSystem());
 systems.push(new TurretSystem());
 systems.push(new VehicleSystem());
 const enemyWaveSystem = new EnemyWaveSystem();
