@@ -48,7 +48,7 @@ class Scene {
     this._setSize();
     document.addEventListener("mousemove", this._updateMouse.bind(this));
     document.addEventListener("DOMContentLoaded", () => {
-      stats = new rStats({ values: { frame: { average: true } } });
+      stats = new rStats({ values: { frame: { caption: "(ms)", average: true } } });
       stats().element.className = "tde-rs-base";
       document.body.append(this._renderer.domElement);
       this._playing = true;

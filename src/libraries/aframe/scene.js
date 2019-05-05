@@ -47,7 +47,7 @@ class Scene {
     this._scene.setAttribute("rstats", "");
 
     document.addEventListener("DOMContentLoaded", () => {
-      stats = new rStats({ values: { frame: { average: true } } });
+      stats = new rStats({ values: { frame: { caption: "(ms)", average: true } } });
       stats().element.className = "tde-rs-base";
       document.body.insertBefore(this._scene, document.body.children[0]);
     });
