@@ -88,5 +88,6 @@ export const ascene = {
   })(),
   stop: () => {
     scene.pause();
+    scene.renderer.setAnimationLoop(null);
   }
 };

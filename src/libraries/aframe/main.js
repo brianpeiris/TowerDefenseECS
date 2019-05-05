@@ -50,29 +50,6 @@ AFRAME.registerComponent("collider", {
   init() {
     const c = this.data.collider;
     this.collider = new THREE.Box3({ x: -c.x / 2, y: -c.y / 2, z: -c.z / 2 }, { x: c.x / 2, y: c.y / 2, z: c.z / 2 });
-    this.tempBox1 = new THREE.Box3();
-    this.tempBox2 = new THREE.Box3();
-  },
-  tick() {
-    const e1 = this.el;
-    const e1c = this.data;
-    const e1m = e1.object3D;
-    e1m.updateMatrixWorld();
-    scene.updateBox(this.tempBox1, this.collider, e1m.matrixWorld);
-    const colliders = this.el.sceneEl.querySelectorAll("[collider]");
-    for (let i = 0; i < colliders.length; i++) {
-      const e2 = colliders[i];
-      if (e2 === e1) continue;
-      if (e1c.collides && !e2.classList.contains(e1c.collides)) continue;
-      const e2c = e2.components.collider;
-      if (!e2c.collider) continue;
-      const e2m = e2.object3D;
-      e2m.updateMatrixWorld();
-      scene.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
-      if (!this.tempBox1.intersectsBox(this.tempBox2)) continue;
-      this.collided = e2;
-      e2c.collided = e1;
-    }
   }
 });
 
@@ -138,6 +115,39 @@ AFRAME.registerComponent("collector", {
 //
 // Systems
 //
+
+AFRAME.registerSystem("collision-system", {
+  init() {
+    this.tempBox1 = new THREE.Box3();
+    this.tempBox2 = new THREE.Box3();
+  },
+  tick() {
+    const entities = document.querySelectorAll("[collider]");
+    for (const entity of entities) {
+      entity.components.collider.collided = null;
+    }
+    for (let i = 0; i < entities.length; i++) {
+      const e1 = entities[i];
+      const e1c = e1.components.collider;
+      if (!e1c.collider) continue;
+      const e1m = e1.object3D;
+      e1m.updateMatrixWorld();
+      scene.updateBox(this.tempBox1, e1c.collider, e1m.matrixWorld);
+      for (let j = i + 1; j < entities.length; j++) {
+        const e2 = entities[j];
+        if (e1c.data.collides && !e2.classList.contains(e1c.data.collides)) continue;
+        const e2c = e2.components.collider;
+        if (!e2c.collider) continue;
+        const e2m = e2.object3D;
+        e2m.updateMatrixWorld();
+        scene.updateBox(this.tempBox2, e2c.collider, e2m.matrixWorld);
+        if (!this.tempBox1.intersectsBox(this.tempBox2)) continue;
+        e1c.collided = e2;
+        e2c.collided = e1;
+      }
+    }
+  }
+});
 
 AFRAME.registerSystem("placement-system", {
   init() {
@@ -269,14 +279,14 @@ function createProjectile() {
   return entity;
 }
 
-function createTurret(addToScene = true, firingRate) {
+function createTurret(standalone = true, firingRate) {
   const entity = document.createElement("a-entity");
   entity.classList.add("entity");
   entity.setAttribute("turret", { firingRate });
   entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
   entity.setAttribute("material", { color: "blue" });
-  entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
-  if (addToScene) {
+  if (standalone) {
+    entity.setAttribute("collider", { collider: "0.8 0.8 0.8", collides: "enemy" });
     scene.add(entity);
   }
   return entity;
