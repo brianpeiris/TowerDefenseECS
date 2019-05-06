@@ -193,7 +193,8 @@ class PlacementSystem {
       vehicle: createTurretVehicle,
       collector: createCollector
     };
-    APP.onCreate = (itemName, cost) => {
+    APP.onCreate = (itemName, cost, e) => {
+      scene.updatePointer(e);
       this.updatePlacement();
       if (!this.placementValid) return;
       let item = this.factories[itemName]();

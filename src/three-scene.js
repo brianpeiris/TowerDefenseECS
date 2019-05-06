@@ -21,7 +21,7 @@ class Scene {
 
     this._raycaster = new THREE.Raycaster();
     this._intersections = [];
-    this._mouse = null;
+    this._pointer = null;
 
     this._floor = this._createFloor();
 
@@ -46,7 +46,7 @@ class Scene {
     });
 
     this._setSize();
-    document.addEventListener("mousemove", this._updateMouse.bind(this));
+    document.addEventListener("mousemove", this.updatePointer);
     document.addEventListener("DOMContentLoaded", () => {
       stats = new rStats({ values: { frame: { caption: "(ms)", average: true } } });
       stats().element.className = "tde-rs-base";
@@ -76,10 +76,10 @@ class Scene {
     this._camera.aspect = window.innerWidth / window.innerHeight;
     this._camera.updateProjectionMatrix();
   };
-  _updateMouse = e => {
-    if (!this._mouse) this._mouse = new THREE.Vector2();
-    this._mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    this._mouse.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
+  updatePointer = e => {
+    if (!this._pointer) this._pointer = new THREE.Vector2();
+    this._pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+    this._pointer.y = ((window.innerHeight - e.clientY) / window.innerHeight) * 2 - 1;
   };
   add = obj => {
     this._scene.add(obj);
@@ -106,8 +106,8 @@ class Scene {
     };
   })();
   getIntersection = () => {
-    if (!this._mouse) return null;
-    this._raycaster.setFromCamera(this._mouse, this._camera);
+    if (!this._pointer) return null;
+    this._raycaster.setFromCamera(this._pointer, this._camera);
     this._intersections.length = 0;
     this._raycaster.intersectObject(this._floor, false, this._intersections);
     if (this._intersections.length) {

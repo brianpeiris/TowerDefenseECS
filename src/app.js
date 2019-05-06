@@ -82,9 +82,9 @@ class App {
     this.ui.info.textContent = info;
   }
 
-  _createItem() {
+  _createItem(e) {
     const itemName = this.currentItem.name;
-    this.onCreate(itemName, this.itemsByName[itemName].cost);
+    this.onCreate(itemName, this.itemsByName[itemName].cost, e);
   }
 
   _selectItem(input, item) {
