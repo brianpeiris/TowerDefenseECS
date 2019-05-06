@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "dependencies": {
+    "@babylonjs/core": "^4.0.3",
+    "tiny-ecs": "^2.0.0"
+  }
+}
