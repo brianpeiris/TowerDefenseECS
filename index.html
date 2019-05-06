@@ -75,6 +75,19 @@
         justify-content: center;
         align-items: center;
       }
+      #sidebar {
+        display: flex;
+        flex-direction: column;
+      }
+      #list {
+        flex: 1;
+      }
+      #source { 
+        display: block;
+        width: 100%;
+        text-align: center;
+        margin: 1em 0;
+      }
       #sidebar.hidden {
         display: none;
       }
@@ -101,7 +114,6 @@
     </style>
   </head>
   <body>
-    <template id=""> </template>
     <div id="hamburger" onclick="showSidebar()" class="hidden">
       <div class="patty"></div>
       <div class="patty"></div>
@@ -110,6 +122,7 @@
     <div id="sidebar">
       <a href="/"><h1>TowerDefenseECS<br /><span>TodoMVC for ECS libraries</span></h1></a>
       <ol id="list"></ol>
+      <a id="source" href="https://github.com/brianpeiris/TowerDefenseECS" target="_blank" rel="noopener">source code</a>
     </div>
     <iframe id="viewer" name="viewer"></iframe>
     <script>
@@ -128,8 +141,8 @@
           githubRepo: "entity-system-js"
         },
         {
-          name: "hecs",
-          githubOwner: "robertlong"
+          name: "aframe",
+          githubOwner: "aframevr"
         }
       ];
 

@@ -1,4 +1,4 @@
-.rs-base {
+.tde-rs-base {
   position: absolute;
   top: 0;
   right: 0;
@@ -14,9 +14,12 @@
 }
 .rs-canvas {
   width: 50px !important;
+  -webkit-order: initial;
 }
 .rs-counter-id {
-  display: none;
+  font-size: 8pt;
+  margin-right: 0.4em;
+  width: auto;
 }
 .rs-counter-value {
   margin-right: 0.25em;
