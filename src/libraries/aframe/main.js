@@ -9,7 +9,7 @@ const App = require("../../app.js");
 const Scene = require("./scene.js");
 
 const APP = new App();
-const scene = new Scene();
+const scene = new Scene(APP.perfMode);
 
 //
 // Components
@@ -22,7 +22,7 @@ AFRAME.registerComponent("velocity", {
     z: { default: 0 }
   },
   tick(time, delta) {
-    const deltaSeconds = delta / 1000;
+    const deltaSeconds = (APP.perfMode ? 30 : delta) / 1000;
     this.el.object3D.position.x += this.data.x * deltaSeconds;
     this.el.object3D.position.y += this.data.y * deltaSeconds;
     this.el.object3D.position.z += this.data.z * deltaSeconds;
@@ -34,7 +34,7 @@ AFRAME.registerComponent("gravity", {
     force: { default: -9.8 }
   },
   tick(time, delta) {
-    const newVelocityY = this.el.getAttribute("velocity").y + this.data.force * (delta / 1000);
+    const newVelocityY = this.el.getAttribute("velocity").y + this.data.force * ((APP.perfMode ? 30 : delta) / 1000);
     this.el.setAttribute("velocity", "y", newVelocityY);
   }
 });
@@ -82,7 +82,7 @@ AFRAME.registerComponent("turret", {
     this.timeUntilFire = 1 / this.data.firingRate;
   },
   tick(time, delta) {
-    this.timeUntilFire -= delta / 1000;
+    this.timeUntilFire -= (APP.perfMode ? 30 : delta) / 1000;
     if (this.timeUntilFire <= 0) {
       const projectile = createProjectile();
       this.el.object3D.getWorldPosition(projectile.object3D.position);
@@ -104,7 +104,7 @@ AFRAME.registerComponent("vehicle", {
       position.x = Math.sign(position.x) * 2;
       this.speed *= -1;
     }
-    position.x += this.speed * (delta / 1000);
+    position.x += this.speed * ((APP.perfMode ? 30 : delta) / 1000);
   }
 });
 
@@ -113,7 +113,7 @@ AFRAME.registerComponent("collector", {
     rate: { default: 20 }
   },
   tick(time, delta) {
-    APP.updatePower(this.data.rate * (delta / 1000));
+    APP.updatePower(this.data.rate * ((APP.perfMode ? 30 : delta) / 1000));
   }
 });
 

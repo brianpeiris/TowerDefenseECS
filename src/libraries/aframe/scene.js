@@ -4,7 +4,7 @@ require("aframe-gridhelper-component");
 const rStats = require("rstatsjs/src/rStats.js");
 
 class Scene {
-  constructor() {
+  constructor(perfMode) {
     this._scene = document.createElement("a-scene");
     this._scene.setAttribute("renderer", "antialias: true");
     this._scene.setAttribute("background", "color: black");
@@ -38,8 +38,11 @@ class Scene {
     this._scene.append(this.placeholder);
 
     let stats;
+    let frame = 0;
     AFRAME.registerComponent("rstats", {
       tick: () => {
+        frame++;
+        if (perfMode && frame === 150) this.stop();
         stats("frame").tick();
         stats().update();
       }

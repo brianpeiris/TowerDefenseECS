@@ -2,7 +2,7 @@ const THREE = require("three");
 const rStats = require("rstatsjs/src/rStats.js");
 
 class Scene {
-  constructor(update) {
+  constructor(update, perfMode) {
     this._scene = new THREE.Scene();
     window.scene = this._scene;
 
@@ -35,9 +35,12 @@ class Scene {
     this.delta = 0;
     this.elapsed = 0;
     this._playing = false;
+    let frame = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this._playing) return;
-      this.delta = clock.getDelta();
+      frame++;
+      if (perfMode && frame === 150) this.stop();
+      this.delta = perfMode ? 30 / 1000 : clock.getDelta();
       this.elapsed = clock.elapsedTime;
       update(this.delta, this.elapsed);
       this._renderer.render(this._scene, this._camera);
