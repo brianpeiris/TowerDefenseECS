@@ -15,15 +15,20 @@
       canvas {
         display: block;
       }
-      h1, #info {
+      h1, #info-container {
         position: absolute;
         width: 100%;
         text-align: center;
       
       }
+      #info-container {
+        display: flex;
+        justify-content: center;
+      }
       #info {
-        font-size: 20pt;
-        margin-top: 2.5em;
+        font-size: 18pt;
+        margin-top: 70px;
+        max-width: 200px;
       }
       #itemSelection {
         position: absolute;
@@ -75,7 +80,7 @@
   </head>
   <body>
     <h1 id="heading"></h1>
-    <div id="info"></div>
+    <div id="info-container"><div id="info"></div></div>
     <template id="itemTemplate">
       <input name="item" type="radio" id="" value="" checked /><label for=""></label>
     </template>

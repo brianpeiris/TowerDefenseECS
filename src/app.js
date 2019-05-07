@@ -14,6 +14,12 @@ class App {
       };
       this._generateItemsUI();
       this.items[0].input.checked = true;
+      this.updatePower(0);
+      if (this.perfMode) {
+        this.ui.info.textContent =
+          "Perf mode runs at a fixed time step, for a fixed number of frames, with 2000 enemy entities";
+        this.ui.info.style.fontSize = "10pt";
+      }
     });
 
     this.items = [
@@ -58,9 +64,9 @@ class App {
     const nextWaveTime = nextWave && nextWave.time;
 
     if (nextWave) {
-      this.ui.info.textContent = `Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`;
+      this.setInfo(`Next wave in ${Math.abs(nextWaveTime - elapsed).toFixed(1)}`);
     } else {
-      this.ui.info.textContent = "Final Wave!";
+      this.setInfo("Final Wave!");
     }
 
     const currentWave = this.waves[this.nextWaveIndex - 1];
@@ -79,6 +85,7 @@ class App {
   }
 
   setInfo(info) {
+    if (this.perfMode) return;
     this.ui.info.textContent = info;
   }
 
