@@ -130,7 +130,7 @@ const collidable = [];
 const enemies = [];
 
 AFRAME.registerSystem("collision-system", {
-  tick() {
+  tick: function collisionSystemTick() {
     const entities = collidable;
     for (const entity of entities) {
       const ec = entity.components.collider;
@@ -139,6 +139,7 @@ AFRAME.registerSystem("collision-system", {
       entity.object3D.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.object3D.matrixWorld);
     }
+    var t0 = performance.now();
     for (let i = 0; i < entities.length; i++) {
       const e1 = entities[i];
       const e1c = e1.components.collider;
@@ -154,6 +155,8 @@ AFRAME.registerSystem("collision-system", {
         e2.components.collider.collided = e1;
       }
     }
+    var t1 = performance.now();
+    console.log("collisionSystemTick " + (t1 - t0) + " milliseconds.");
   }
 });
 

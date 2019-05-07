@@ -42,7 +42,7 @@ class Scene {
     AFRAME.registerComponent("rstats", {
       tick: () => {
         frame++;
-        if (perfMode && frame === 75) this.stop();
+        // if (perfMode && frame === 75) this.stop();
         stats("frame").tick();
         stats().update();
       }

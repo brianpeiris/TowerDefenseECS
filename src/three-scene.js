@@ -39,7 +39,7 @@ class Scene {
     this._renderer.setAnimationLoop(() => {
       if (!this._playing) return;
       frame++;
-      if (perfMode && frame === 75) this.stop();
+      // if (perfMode && frame === 75) this.stop();
       this.delta = perfMode ? 30 / 1000 : clock.getDelta();
       this.elapsed = clock.elapsedTime;
       update(this.delta, this.elapsed);

@@ -101,13 +101,14 @@ class CollisionSystem {
   constructor(entities) {
     this.query = entities.queryComponents([Mesh, Collider]);
   }
-  update() {
+  update = function collisionSystemUpdate() {
     for (const entity of this.query) {
       const ec = entity.collider;
       ec.collided = null;
       entity.mesh.mesh.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.mesh.mesh.matrixWorld);
     }
+    var t0 = performance.now();
     for (let i = 0; i < this.query.length; i++) {
       const e1 = this.query[i];
       const e1c = e1.collider;
@@ -120,6 +121,8 @@ class CollisionSystem {
         e2c.collided = e1;
       }
     }
+    var t1 = performance.now();
+    console.log("collisionSystemUpdate " + (t1 - t0) + " milliseconds.");
   }
 }
 
