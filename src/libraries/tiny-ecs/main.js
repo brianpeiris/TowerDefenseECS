@@ -9,7 +9,7 @@ const App = require("../../app.js");
 const Scene = require("../../three-scene.js");
 
 const APP = new App();
-const scene = new Scene(update);
+const scene = new Scene(update, APP.perfMode);
 
 //
 // ECS Setup
