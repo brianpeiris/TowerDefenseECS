@@ -266,7 +266,9 @@ AFRAME.registerSystem("removal-system", {
 
       if (!entity.isPlaying || !entity.parentElement) continue;
 
-      if (entity.isProjectile) {
+      if (entity.isEnemy) {
+        scene.sceneEl.components.pool__enemy.returnEntity(entity);
+      } else if (entity.isProjectile) {
         scene.sceneEl.components.pool__projectile.returnEntity(entity);
       } else {
         entity.parentElement.removeChild(entity);
@@ -280,19 +282,24 @@ AFRAME.registerSystem("removal-system", {
 // Entity factories
 //
 
+// Pooling optimization.
+const enemyAsset = document.createElement("a-mixin");
+enemyAsset.id = "enemy";
+enemyAsset.setAttribute("geometry", "primitive: box; width: 0.8; height: 0.8; depth: 0.8");
+enemyAsset.setAttribute("material", "color: green");
+enemyAsset.setAttribute("velocity", "z: 1.5");
+enemyAsset.setAttribute("collider", "colliderSize: 0.8;");
+enemyAsset.setAttribute("explosive", "destructible: false");
+scene.sceneEl.append(enemyAsset);
+scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? 2000 : 200};`);
+
 function createEnemy() {
-  const entity = document.createElement("a-entity");
-  entity.setAttribute("enemy", "");
-  entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
-  entity.setAttribute("material", { color: "green" });
-  entity.setAttribute("velocity", { z: 1.5 });
-  entity.setAttribute("collider", { colliderSize: 0.8 });
-  entity.setAttribute("explosive", { destructible: false });
+  const entity = scene.sceneEl.components.pool__enemy.requestEntity();
   entity.isEnemy = true;
   entities.push(entity);
   collidable.push(entity);
   enemies.push(entity);
-  scene.add(entity);
+  entity.play();
   return entity;
 }
 
