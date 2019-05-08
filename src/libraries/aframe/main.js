@@ -117,6 +117,9 @@ AFRAME.registerSystem("velocity-system", {
   }
 });
 
+// Optimization to avoid iteration and component access of A-Frame components and entities.
+const colliders = [];
+
 AFRAME.registerSystem("collision-system", {
   tick() {
     const entities = collidable;
@@ -126,18 +129,37 @@ AFRAME.registerSystem("collision-system", {
       ec.collided = null;
       entity.object3D.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.object3D.matrixWorld);
+      const collider = colliders[i];
+      // Extract relevant properties into a simple object.
+      if (!collider) {
+        // Initialize array objects fully to ensure that array always contains objects
+        // of the same shape.
+        colliders[i] = {
+          entity,
+          collider: ec,
+          collides: ec.data.collides,
+          className: entity.className,
+          offsetCollider: ec.offsetCollider
+        };
+      } else {
+        collider.entity = entity;
+        collider.collider = ec;
+        collider.collides = ec.data.collides;
+        collider.className = entity.className;
+        collider.offsetCollider = ec.offsetCollider;
+      }
     }
-    for (let i = 0; i < entities.length; i++) {
-      const e1 = entities[i];
-      const e1c = e1.components.collider;
-      for (let j = i + 1; j < entities.length; j++) {
-        const e2 = entities[j];
-        if (e1c.data.collides && e2.className !== e1c.data.collides) continue;
-        const e2c = e2.components.collider;
-        if (APP.perfMode) scene.intersectsBoxCalls++;
+    // Truncate cache.
+    colliders.length = entities.length;
+
+    for (let i = 0; i < colliders.length; i++) {
+      const e1c = colliders[i];
+      for (let j = i + 1; j < colliders.length; j++) {
+        const e2c = colliders[j];
+        if (e1c.collides && e2c.className !== e1c.collides) continue;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
-        e1c.collided = e2;
-        e2c.collided = e1;
+        e1c.collider.collided = e2c.entity;
+        e2c.collider.collided = e1c.entity;
       }
     }
   }
@@ -311,7 +333,6 @@ if (!APP.perfMode) {
 // A-Frame pooling optimization to save on enemy destruction.
 const enemyAsset = document.createElement("a-mixin");
 enemyAsset.id = "enemy";
-enemyAsset.setAttribute("enemy", "");
 enemyAsset.setAttribute("geometry", "primitive: box; width: 0.8; height: 0.8; depth: 0.8");
 enemyAsset.setAttribute("material", "color: green");
 enemyAsset.setAttribute("velocity", "z: 1.5");
@@ -348,6 +369,7 @@ function createMine() {
 // A-Frame pooling optimization for projectiles, since we create and destroy a lot of these per tick.
 const projectileAsset = document.createElement("a-mixin");
 projectileAsset.id = "projectile";
+projectileAsset.setAttribute("gravity", "");
 projectileAsset.setAttribute("geometry", "primitive: box; width: 0.2; height: 0.2; depth: 0.2");
 projectileAsset.setAttribute("material", "color: red");
 projectileAsset.setAttribute("gravity", "");
