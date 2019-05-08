@@ -272,7 +272,7 @@ AFRAME.registerSystem("enemy-wave-system", {
     const occupied = {};
     for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
-      const lane = APP.perfMode ? i % 5 - 2 : THREE.Math.randInt(-2, 2);
+      const lane = APP.perfMode ? (i % 5) - 2 : THREE.Math.randInt(-2, 2);
       enemy.object3D.position.x = lane;
       occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
       enemy.object3D.position.z = occupied[lane] - 5;

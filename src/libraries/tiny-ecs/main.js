@@ -9,7 +9,7 @@ const App = require("../../app.js");
 const Scene = require("../../three-scene.js");
 
 const APP = new App();
-const scene = window.scene = new Scene(update, APP.perfMode);
+const scene = new Scene(update, APP.perfMode);
 
 //
 // ECS Setup
@@ -102,7 +102,6 @@ class CollisionSystem {
     this.query = entities.queryComponents([Mesh, Collider]);
   }
   update() {
-    if (APP.perfMode && scene.frame === 75) console.log("entities:", this.query.length);
     for (const entity of this.query) {
       const ec = entity.collider;
       ec.collided = null;
@@ -275,7 +274,7 @@ class EnemyWaveSystem {
     const occupied = {};
     for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
-      const lane = APP.perfMode ? i % 5 - 2 : THREE.Math.randInt(-2, 2);
+      const lane = APP.perfMode ? (i % 5) - 2 : THREE.Math.randInt(-2, 2);
       enemy.mesh.mesh.position.x = lane;
       occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
       enemy.mesh.mesh.position.z = occupied[lane] - 5;
