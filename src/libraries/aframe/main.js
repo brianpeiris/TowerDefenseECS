@@ -15,8 +15,6 @@ const scene = new Scene(APP.perfMode);
 // Components
 //
 
-AFRAME.registerComponent("enemy", {});
-
 AFRAME.registerComponent("velocity", {
   schema: {
     x: { default: 0 },
@@ -24,16 +22,10 @@ AFRAME.registerComponent("velocity", {
     z: { default: 0 }
   },
   play() {
-    // Optimization to avoid setAttribute.
+    // A-Frame optimization to avoid setAttribute.
     this.x = this.data.x;
     this.y = this.data.y;
     this.z = this.data.z;
-  },
-  tick(time, delta) {
-    const deltaSeconds = (APP.perfMode ? 30 : delta) / 1000;
-    this.el.object3D.position.x += this.x * deltaSeconds;
-    this.el.object3D.position.y += this.y * deltaSeconds;
-    this.el.object3D.position.z += this.z * deltaSeconds;
   }
 });
 
@@ -60,20 +52,9 @@ AFRAME.registerComponent("collider", {
   }
 });
 
-const entitiesToRemove = [];
 AFRAME.registerComponent("explosive", {
   schema: {
     destructible: { default: true }
-  },
-  tick() {
-    const { collided } = this.el.components.collider;
-    const explosiveBelowFloor = this.el.object3D.position.y <= -0.5;
-    if (explosiveBelowFloor || (collided && this.data.destructible)) {
-      entitiesToRemove.push(this.el);
-    }
-    if (collided) {
-      entitiesToRemove.push(collided);
-    }
   }
 });
 
@@ -83,14 +64,6 @@ AFRAME.registerComponent("turret", {
   },
   init() {
     this.timeUntilFire = 1 / this.data.firingRate;
-  },
-  tick(time, delta) {
-    this.timeUntilFire -= (APP.perfMode ? 30 : delta) / 1000;
-    if (this.timeUntilFire <= 0) {
-      const projectile = createProjectile();
-      this.el.object3D.getWorldPosition(projectile.object3D.position);
-      this.timeUntilFire = 1 / this.data.firingRate;
-    }
   }
 });
 
@@ -124,34 +97,139 @@ AFRAME.registerComponent("collector", {
 // Systems
 //
 
-// Optimization to avoid querySelectorAll
+// A-Frame optimization to avoid querySelectorAll
 const entities = [];
 const collidable = [];
+const explosives = [];
 const enemies = [];
+const turrets = [];
+const velocities = [];
+
+AFRAME.registerSystem("velocity-system", {
+  tick(time, delta) {
+    for (const entity of velocities) {
+      const { velocity } = entity.components;
+      const deltaSeconds = (APP.perfMode ? 30 : delta) / 1000;
+      entity.object3D.position.x += velocity.x * deltaSeconds;
+      entity.object3D.position.y += velocity.y * deltaSeconds;
+      entity.object3D.position.z += velocity.z * deltaSeconds;
+    }
+  }
+});
+
+// Optimization to avoid iteration and component access of A-Frame components and entities.
+const colliders = [];
 
 AFRAME.registerSystem("collision-system", {
   tick() {
     const entities = collidable;
-    for (const entity of entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
       const ec = entity.components.collider;
-      if (!ec.collider) continue;
-      entity.components.collider.collided = null;
+      ec.collided = null;
       entity.object3D.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.object3D.matrixWorld);
+      const collider = colliders[i];
+      // Extract relevant properties into a simple object.
+      if (!collider) {
+        // Initialize array objects fully to ensure that array always contains objects
+        // of the same shape.
+        colliders[i] = {
+          entity,
+          collider: ec,
+          collides: ec.data.collides,
+          className: entity.className,
+          offsetCollider: ec.offsetCollider
+        };
+      } else {
+        collider.entity = entity;
+        collider.collider = ec;
+        collider.collides = ec.data.collides;
+        collider.className = entity.className;
+        collider.offsetCollider = ec.offsetCollider;
+      }
     }
-    for (let i = 0; i < entities.length; i++) {
-      const e1 = entities[i];
-      const e1c = e1.components.collider;
-      if (!e1c.data) continue;
-      if (!e1c.offsetCollider) continue;
-      for (let j = i + 1; j < entities.length; j++) {
-        const e2 = entities[j];
-        if (e1c.data.collides && !(e1c.data.collides in e2.components)) continue;
-        const e2c = e2.components.collider;
-        if (!e2c.offsetCollider) continue;
+    // Truncate cache.
+    colliders.length = entities.length;
+
+    for (let i = 0; i < colliders.length; i++) {
+      const e1c = colliders[i];
+      for (let j = i + 1; j < colliders.length; j++) {
+        const e2c = colliders[j];
+        if (e1c.collides && e2c.className !== e1c.collides) continue;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
-        e1c.collided = e2;
-        e2.components.collider.collided = e1;
+        e1c.collider.collided = e2c.entity;
+        e2c.collider.collided = e1c.entity;
+      }
+    }
+  }
+});
+
+const entitiesToRemove = [];
+AFRAME.registerSystem("explosive-system", {
+  tick() {
+    for (let i = 0; i < explosives.length; i++) {
+      const entity = explosives[i];
+      const { collided } = entity.components.collider;
+      const explosiveBelowFloor = entity.object3D.position.y <= -0.5;
+      if (explosiveBelowFloor || (collided && entity.components.explosive.data.destructible)) {
+        entitiesToRemove.push(entity);
+      }
+      if (collided) {
+        entitiesToRemove.push(collided);
+      }
+    }
+  }
+});
+
+AFRAME.registerSystem("removal-system", {
+  tick() {
+    for (let i = 0; i < entitiesToRemove.length; i++) {
+      const entity = entitiesToRemove[i];
+
+      const entitiesIndex = entities.indexOf(entity);
+      if (entitiesIndex !== -1) entities.splice(entitiesIndex, 1).id;
+
+      const collidableIndex = collidable.indexOf(entity);
+      if (collidableIndex !== -1) collidable.splice(collidableIndex, 1).id;
+
+      const explosiveIndex = explosives.indexOf(entity);
+      if (explosiveIndex !== -1) explosives.splice(explosiveIndex, 1).id;
+
+      const turretIndex = turrets.indexOf(entity);
+      if (turretIndex !== -1) turrets.splice(turretIndex, 1).id;
+
+      const velocityIndex = velocities.indexOf(entity);
+      if (velocityIndex !== -1) velocities.splice(velocityIndex, 1).id;
+
+      if (entity.className === "enemy") {
+        const enemiesIndex = enemies.indexOf(entity);
+        if (enemiesIndex !== -1) enemies.splice(enemiesIndex, 1).id;
+      }
+
+      if (!entity.isPlaying || !entity.parentElement) continue;
+
+      if (entity.className === "enemy") {
+        scene.sceneEl.components.pool__enemy.returnEntity(entity);
+      } else if (entity.className === "projectile") {
+        scene.sceneEl.components.pool__projectile.returnEntity(entity);
+      } else {
+        entity.parentElement.removeChild(entity);
+      }
+    }
+    entitiesToRemove.length = 0;
+  }
+});
+
+AFRAME.registerSystem("turret-system", {
+  tick(time, delta) {
+    for (const entity of turrets) {
+      const { turret } = entity.components;
+      turret.timeUntilFire -= (APP.perfMode ? 30 : delta) / 1000;
+      if (turret.timeUntilFire <= 0) {
+        const projectile = createProjectile();
+        entity.object3D.getWorldPosition(projectile.object3D.position);
+        turret.timeUntilFire = 1 / turret.data.firingRate;
       }
     }
   }
@@ -188,7 +266,7 @@ AFRAME.registerSystem("placement-system", {
       for (const entity of entities) {
         entity.object3D.getWorldPosition(this.worldPosition);
         const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-        if (!entity.isProjectile && x === ex && z === ez) {
+        if (entity.className !== "projectile" && x === ex && z === ez) {
           this.placementValid = false;
         }
       }
@@ -214,7 +292,7 @@ AFRAME.registerSystem("enemy-wave-system", {
     const occupied = {};
     for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
-      const lane = THREE.Math.randInt(-2, 2);
+      const lane = APP.perfMode ? (i % 5) - 2 : THREE.Math.randInt(-2, 2);
       enemy.object3D.position.x = lane;
       occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
       enemy.object3D.position.z = occupied[lane] - 5;
@@ -248,41 +326,11 @@ if (!APP.perfMode) {
   });
 }
 
-AFRAME.registerSystem("removal-system", {
-  tick() {
-    for (let i = 0; i < entitiesToRemove.length; i++) {
-      const entity = entitiesToRemove[i];
-
-      const entitiesIndex = entities.indexOf(entity);
-      if (entitiesIndex !== -1) entities.splice(entitiesIndex, 1).id;
-
-      const collidableIndex = collidable.indexOf(entity);
-      if (collidableIndex !== -1) collidable.splice(collidableIndex, 1).id;
-
-      if (entity.isEnemy) {
-        const enemiesIndex = enemies.indexOf(entity);
-        if (enemiesIndex !== -1) enemies.splice(enemiesIndex, 1).id;
-      }
-
-      if (!entity.isPlaying || !entity.parentElement) continue;
-
-      if (entity.isEnemy) {
-        scene.sceneEl.components.pool__enemy.returnEntity(entity);
-      } else if (entity.isProjectile) {
-        scene.sceneEl.components.pool__projectile.returnEntity(entity);
-      } else {
-        entity.parentElement.removeChild(entity);
-      }
-    }
-    entitiesToRemove.length = 0;
-  }
-});
-
 //
 // Entity factories
 //
 
-// Pooling optimization.
+// A-Frame pooling optimization to save on enemy destruction.
 const enemyAsset = document.createElement("a-mixin");
 enemyAsset.id = "enemy";
 enemyAsset.setAttribute("geometry", "primitive: box; width: 0.8; height: 0.8; depth: 0.8");
@@ -291,14 +339,16 @@ enemyAsset.setAttribute("velocity", "z: 1.5");
 enemyAsset.setAttribute("collider", "colliderSize: 0.8;");
 enemyAsset.setAttribute("explosive", "destructible: false");
 scene.sceneEl.append(enemyAsset);
-scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? 2000 : 200};`);
+scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? APP.PERF_ENEMIES : 200};`);
 
 function createEnemy() {
   const entity = scene.sceneEl.components.pool__enemy.requestEntity();
-  entity.isEnemy = true;
+  entity.className = "enemy";
   entities.push(entity);
   collidable.push(entity);
+  explosives.push(entity);
   enemies.push(entity);
+  velocities.push(entity);
   entity.play();
   return entity;
 }
@@ -311,13 +361,15 @@ function createMine() {
   entity.setAttribute("explosive", "");
   entities.push(entity);
   collidable.push(entity);
+  explosives.push(entity);
   scene.add(entity);
   return entity;
 }
 
-// Pooling optimization for projectiles, since we create and destroy a lot of these per tick.
+// A-Frame pooling optimization for projectiles, since we create and destroy a lot of these per tick.
 const projectileAsset = document.createElement("a-mixin");
 projectileAsset.id = "projectile";
+projectileAsset.setAttribute("gravity", "");
 projectileAsset.setAttribute("geometry", "primitive: box; width: 0.2; height: 0.2; depth: 0.2");
 projectileAsset.setAttribute("material", "color: red");
 projectileAsset.setAttribute("gravity", "");
@@ -329,9 +381,11 @@ scene.sceneEl.setAttribute("pool__projectile", "mixin: projectile; size: 100;");
 
 function createProjectile() {
   const entity = scene.sceneEl.components.pool__projectile.requestEntity();
-  entity.isProjectile = true;
+  entity.className = "projectile";
   entities.push(entity);
   collidable.push(entity);
+  explosives.push(entity);
+  velocities.push(entity);
   entity.play();
   return entity;
 }
@@ -339,7 +393,7 @@ function createProjectile() {
 function createTurret(standalone = true, firingRate) {
   const entity = document.createElement("a-entity");
   entity.setAttribute("turret", { firingRate });
-  entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
+  entity.setAttribute("geometry", { primitive: "box", width: 0.7, height: 0.7, depth: 0.7 });
   entity.setAttribute("material", { color: "blue" });
   if (standalone) {
     entity.setAttribute("collider", { colliderSize: 0.8, collides: "enemy" });
@@ -347,6 +401,7 @@ function createTurret(standalone = true, firingRate) {
     collidable.push(entity);
     scene.add(entity);
   }
+  turrets.push(entity);
   return entity;
 }
 

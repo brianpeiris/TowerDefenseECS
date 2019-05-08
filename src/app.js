@@ -10,7 +10,8 @@ class App {
       this.ui = {
         info: document.getElementById("info"),
         itemSelection: document.getElementById("itemSelection"),
-        power: document.getElementById("power")
+        power: document.getElementById("power"),
+        continue: document.getElementById("continue")
       };
       this._generateItemsUI();
       this.items[0].input.checked = true;
@@ -19,6 +20,10 @@ class App {
         this.ui.info.textContent =
           "Perf mode runs at a fixed time step, for a fixed number of frames, with 2000 enemy entities";
         this.ui.info.style.fontSize = "10pt";
+        if (!location.search.includes("continue")){ 
+          this.ui.continue.style.display = "inline";
+          this.ui.continue.href = "/" + location.search + "&continue";
+        }
       }
     });
 
@@ -42,9 +47,10 @@ class App {
       this._createItem(changedTouches[0]);
     });
 
+    this.PERF_ENEMIES = 2000;
     this.perfMode = location.search.includes("perf");
     if (this.perfMode) {
-      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 2000 }];
+      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: this.PERF_ENEMIES }];
     } else {
       this.waves = [
         { time: 0, enemies: 0 },

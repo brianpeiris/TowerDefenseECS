@@ -16,13 +16,13 @@ class Scene {
     light.setAttribute("position", "0.5 1 -1");
     this.sceneEl.append(light);
     const ambient = document.createElement("a-entity");
-    ambient.setAttribute("light", "type: ambient; intensity: 0.5;");
+    ambient.setAttribute("light", "type: ambient; intensity: 0.45;");
     this.sceneEl.append(ambient);
 
     const camera = document.createElement("a-entity");
     camera.setAttribute("camera", "fov: 50");
     camera.setAttribute("position", "15 15 15");
-    camera.setAttribute("rotation", "-25 45 -5");
+    camera.object3D.quaternion.set(-0.20185, 0.373438, 0.08361, 0.90156);
     this.sceneEl.append(camera);
 
     this._raycaster = document.createElement("a-entity");
@@ -38,11 +38,15 @@ class Scene {
     this.sceneEl.append(this.placeholder);
 
     let stats;
-    let frame = 0;
+    this.frame = 0;
+    this.intersectsBoxCalls = 0;
     AFRAME.registerComponent("rstats", {
       tick: () => {
-        frame++;
-        if (perfMode && frame === 75) this.stop();
+        this.frame++;
+        if (perfMode && this.frame === 75) {
+          if (!location.search.includes("continue")) this.stop();
+          console.log("frame:", stats("frame").value());
+        }
         stats("frame").tick();
         stats().update();
       }
