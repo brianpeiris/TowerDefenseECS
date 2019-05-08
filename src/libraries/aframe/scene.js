@@ -38,11 +38,15 @@ class Scene {
     this.sceneEl.append(this.placeholder);
 
     let stats;
-    let frame = 0;
+    this.frame = 0;
     AFRAME.registerComponent("rstats", {
       tick: () => {
-        frame++;
-        if (perfMode && frame === 75) this.stop();
+        console.log("tick", this.frame);
+        this.frame++;
+        if (perfMode && this.frame === 15) {
+          this.stop();
+          console.log("intersectsBox calls:", window.calls, "frame:", stats("frame").value());
+        }
         stats("frame").tick();
         stats().update();
       }

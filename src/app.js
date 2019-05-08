@@ -44,7 +44,7 @@ class App {
 
     this.perfMode = location.search.includes("perf");
     if (this.perfMode) {
-      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 2000 }];
+      this.waves = [{ time: 0, enemies: 0 }, { time: 0, enemies: 2 }];
     } else {
       this.waves = [
         { time: 0, enemies: 0 },

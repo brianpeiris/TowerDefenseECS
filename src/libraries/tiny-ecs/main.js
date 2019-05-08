@@ -89,6 +89,7 @@ class VelocitySystem {
     this.query = entities.queryComponents([Velocity, Mesh]);
   }
   update(delta) {
+    console.log("velocity tick");
     for (const entity of this.query) {
       entity.mesh.mesh.position.x += entity.velocity.x * delta;
       entity.mesh.mesh.position.y += entity.velocity.y * delta;
@@ -97,25 +98,30 @@ class VelocitySystem {
   }
 }
 
+window.calls = 0;
 class CollisionSystem {
   constructor(entities) {
     this.query = entities.queryComponents([Mesh, Collider]);
   }
   update() {
+    console.log("collision tick", window.calls, this.query.map(e => e.tag));
     for (const entity of this.query) {
       const ec = entity.collider;
       ec.collided = null;
       entity.mesh.mesh.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.mesh.mesh.matrixWorld);
     }
+    if (scene.frame === 70) console.log("entities:", this.query.length);
     for (let i = 0; i < this.query.length; i++) {
       const e1 = this.query[i];
       const e1c = e1.collider;
       for (let j = i + 1; j < this.query.length; j++) {
         const e2 = this.query[j];
-        if (e1c.collides && !e2.hasTag(e1c.collides)) continue;
+        if (e1c.collides && !e2.hasTag(e1c.collides)) { console.log("bail"); continue; }
         const e2c = e2.collider;
+        window.calls++;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
+        console.log("collision ", e1.tag, e2.tag);
         e1c.collided = e2;
         e2c.collided = e1;
       }
@@ -128,6 +134,7 @@ class ExplosiveSystem {
     this.query = entities.queryComponents([Mesh, Explosive, Collider]);
   }
   update() {
+    console.log("explosive tick");
     for (const entity of this.query) {
       const { collided } = entity.collider;
       const explosiveBelowFloor = entity.mesh.mesh.position.y <= -0.5;
@@ -162,6 +169,7 @@ class MeshRemover {
     for (const entity of this.query) {
       this._entitiesToRemove.push(entity);
     }
+    console.log("removal tick", this._entitiesToRemove.map(e => e.tag));
     for (const entity of this._entitiesToRemove) {
       entity.mesh.mesh.parent.remove(entity.mesh.mesh);
       entity.remove();
@@ -231,6 +239,7 @@ class TurretSystem {
     this.query = entities.queryComponents([Turret, Mesh]);
   }
   update(delta) {
+    console.log("turret tick");
     for (const entity of this.query) {
       entity.turret.timeUntilFire -= delta;
       if (entity.turret.timeUntilFire <= 0) {
@@ -273,7 +282,7 @@ class EnemyWaveSystem {
     const occupied = {};
     for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
-      const lane = THREE.Math.randInt(-2, 2);
+      const lane = APP.perfMode ? i % 5 - 2 : THREE.Math.randInt(-2, 2);
       enemy.mesh.mesh.position.x = lane;
       occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
       enemy.mesh.mesh.position.z = occupied[lane] - 5;
@@ -326,8 +335,10 @@ if (!APP.perfMode) {
 // Entity factories
 //
 
+let ec = 0;
 function createEnemy() {
   const entity = entities.createEntity();
+  entity.tag = `enemy-${ec++}`;
   entity.addTag("enemy");
   entity.addComponent(Mesh);
   entity.mesh.mesh = scene.createBox("green");
@@ -353,8 +364,10 @@ function createMine() {
   return entity;
 }
 
+let pc = 0;
 function createProjectile() {
   const entity = entities.createEntity();
+  entity.tag = `projectile-${pc++}`;
   entity.addTag("projectile");
   entity.addComponent(Mesh);
   entity.mesh.mesh = scene.createBox("red", 0.2);
@@ -395,7 +408,7 @@ function createTurretVehicle() {
   entity.addComponent(Collider);
   entity.collider.collides = "enemy";
   entity.collider.collider = new THREE.Box3().setFromObject(entity.mesh.mesh);
-  const turret = createTurret(false, 1);
+  const turret = createTurret(false, 5);
   turret.mesh.mesh.position.y = 0.5;
   entity.mesh.mesh.add(turret.mesh.mesh);
   entity.vehicle.onboard = turret;
@@ -416,10 +429,10 @@ function createCollector() {
 }
 
 if (APP.perfMode) {
-  for (let i = 0; i < 5; i++) {
-    for (let j = 0; j < 4; j++) {
-      const turret = createTurretVehicle();
-      turret.mesh.mesh.position.set(i - 2, 0, j + 2);
+  for (let i = 0; i < 1; i++) {
+    for (let j = 0; j < 1; j++) {
+      const turret = createTurret(true, 10);
+      turret.mesh.mesh.position.set(i - 2, 0, j - 2);
     }
   }
 }

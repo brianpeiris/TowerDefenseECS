@@ -35,11 +35,15 @@ class Scene {
     this.delta = 0;
     this.elapsed = 0;
     this._playing = false;
-    let frame = 0;
+    this.frame = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this._playing) return;
-      frame++;
-      if (perfMode && frame === 75) this.stop();
+      console.log("tick", this.frame);
+      this.frame++;
+      if (perfMode && this.frame === 15) {
+        this.stop();
+        console.log("intersectsBox calls:", window.calls, "frame:", stats("frame").value());
+      }
       this.delta = perfMode ? 30 / 1000 : clock.getDelta();
       this.elapsed = clock.elapsedTime;
       update(this.delta, this.elapsed);

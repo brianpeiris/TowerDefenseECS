@@ -28,12 +28,6 @@ AFRAME.registerComponent("velocity", {
     this.x = this.data.x;
     this.y = this.data.y;
     this.z = this.data.z;
-  },
-  tick(time, delta) {
-    const deltaSeconds = (APP.perfMode ? 30 : delta) / 1000;
-    this.el.object3D.position.x += this.x * deltaSeconds;
-    this.el.object3D.position.y += this.y * deltaSeconds;
-    this.el.object3D.position.z += this.z * deltaSeconds;
   }
 });
 
@@ -60,20 +54,9 @@ AFRAME.registerComponent("collider", {
   }
 });
 
-const entitiesToRemove = [];
 AFRAME.registerComponent("explosive", {
   schema: {
     destructible: { default: true }
-  },
-  tick() {
-    const { collided } = this.el.components.collider;
-    const explosiveBelowFloor = this.el.object3D.position.y <= -0.5;
-    if (explosiveBelowFloor || (collided && this.data.destructible)) {
-      entitiesToRemove.push(this.el);
-    }
-    if (collided) {
-      entitiesToRemove.push(collided);
-    }
   }
 });
 
@@ -83,14 +66,6 @@ AFRAME.registerComponent("turret", {
   },
   init() {
     this.timeUntilFire = 1 / this.data.firingRate;
-  },
-  tick(time, delta) {
-    this.timeUntilFire -= (APP.perfMode ? 30 : delta) / 1000;
-    if (this.timeUntilFire <= 0) {
-      const projectile = createProjectile();
-      this.el.object3D.getWorldPosition(projectile.object3D.position);
-      this.timeUntilFire = 1 / this.data.firingRate;
-    }
   }
 });
 
@@ -127,31 +102,121 @@ AFRAME.registerComponent("collector", {
 // Optimization to avoid querySelectorAll
 const entities = [];
 const collidable = [];
+const explosives = [];
 const enemies = [];
+const turrets = [];
+const velocities = [];
 
+AFRAME.registerSystem("velocity-system", {
+  tick(time, delta) {
+    console.log("velocity tick");
+    for (const entity of velocities) {
+      const { velocity } = entity.components;
+      const deltaSeconds = (APP.perfMode ? 30 : delta) / 1000;
+      entity.object3D.position.x += velocity.x * deltaSeconds;
+      entity.object3D.position.y += velocity.y * deltaSeconds;
+      entity.object3D.position.z += velocity.z * deltaSeconds;
+    }
+  }
+});
+
+window.calls = 0;
 AFRAME.registerSystem("collision-system", {
   tick() {
     const entities = collidable;
+    console.log("collision tick", window.calls, entities.map(e => e.tag));
     for (const entity of entities) {
       const ec = entity.components.collider;
-      if (!ec.collider) continue;
-      entity.components.collider.collided = null;
+      ec.collided = null;
       entity.object3D.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.object3D.matrixWorld);
     }
+    if (scene.frame === 70) console.log("entities:", entities.length);
     for (let i = 0; i < entities.length; i++) {
       const e1 = entities[i];
       const e1c = e1.components.collider;
-      if (!e1c.data) continue;
-      if (!e1c.offsetCollider) continue;
       for (let j = i + 1; j < entities.length; j++) {
         const e2 = entities[j];
-        if (e1c.data.collides && !(e1c.data.collides in e2.components)) continue;
+        if (e1c.data.collides && !e2.components.hasOwnProperty(e1c.data.collides)) { console.log("bail"); continue; }
         const e2c = e2.components.collider;
-        if (!e2c.offsetCollider) continue;
+        window.calls++;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
+        console.log("collision ", e1.tag, e2.tag);
         e1c.collided = e2;
-        e2.components.collider.collided = e1;
+        e2c.collided = e1;
+      }
+    }
+  }
+});
+
+const entitiesToRemove = [];
+AFRAME.registerSystem("explosive-system", {
+  tick() {
+    console.log("explosive tick");
+    for (let i = 0; i < explosives.length; i++) {
+      const entity = explosives[i];
+      const { collided } = entity.components.collider;
+      const explosiveBelowFloor = entity.object3D.position.y <= -0.5;
+      if (explosiveBelowFloor || (collided && entity.components.explosive.data.destructible)) {
+        entitiesToRemove.push(entity);
+      }
+      if (collided) {
+        entitiesToRemove.push(collided);
+      }
+    }
+  }
+});
+
+AFRAME.registerSystem("removal-system", {
+  tick() {
+    console.log("removal tick", entitiesToRemove.map(e => e.tag));
+    for (let i = 0; i < entitiesToRemove.length; i++) {
+      const entity = entitiesToRemove[i];
+
+      const entitiesIndex = entities.indexOf(entity);
+      if (entitiesIndex !== -1) entities.splice(entitiesIndex, 1).id;
+
+      const collidableIndex = collidable.indexOf(entity);
+      if (collidableIndex !== -1) collidable.splice(collidableIndex, 1).id;
+
+      const explosiveIndex = explosives.indexOf(entity);
+      if (explosiveIndex !== -1) explosives.splice(explosiveIndex, 1).id;
+
+      const turretIndex = turrets.indexOf(entity);
+      if (turretIndex !== -1) turrets.splice(turretIndex, 1).id;
+
+      const velocityIndex = velocities.indexOf(entity);
+      if (velocityIndex !== -1) velocities.splice(velocityIndex, 1).id;
+
+      if (entity.isEnemy) {
+        const enemiesIndex = enemies.indexOf(entity);
+        if (enemiesIndex !== -1) enemies.splice(enemiesIndex, 1).id;
+      }
+
+      if (!entity.isPlaying || !entity.parentElement) continue;
+
+      if (entity.isEnemy) {
+        scene.sceneEl.components.pool__enemy.returnEntity(entity);
+      } else if (entity.isProjectile) {
+        scene.sceneEl.components.pool__projectile.returnEntity(entity);
+      } else {
+        entity.parentElement.removeChild(entity);
+      }
+    }
+    entitiesToRemove.length = 0;
+  }
+});
+
+AFRAME.registerSystem("turret-system", {
+  tick(time, delta) {
+    console.log("turret tick");
+    for (const entity of turrets) {
+      const { turret } = entity.components;
+      turret.timeUntilFire -= (APP.perfMode ? 30 : delta) / 1000;
+      if (turret.timeUntilFire <= 0) {
+        const projectile = createProjectile();
+        entity.object3D.getWorldPosition(projectile.object3D.position);
+        turret.timeUntilFire = 1 / turret.data.firingRate;
       }
     }
   }
@@ -214,7 +279,7 @@ AFRAME.registerSystem("enemy-wave-system", {
     const occupied = {};
     for (let i = 0; i < wave.enemies; i++) {
       const enemy = createEnemy();
-      const lane = THREE.Math.randInt(-2, 2);
+      const lane = APP.perfMode ? i % 5 - 2 : THREE.Math.randInt(-2, 2);
       enemy.object3D.position.x = lane;
       occupied[lane] = occupied[lane] === undefined ? 0 : occupied[lane] - 2;
       enemy.object3D.position.z = occupied[lane] - 5;
@@ -248,36 +313,6 @@ if (!APP.perfMode) {
   });
 }
 
-AFRAME.registerSystem("removal-system", {
-  tick() {
-    for (let i = 0; i < entitiesToRemove.length; i++) {
-      const entity = entitiesToRemove[i];
-
-      const entitiesIndex = entities.indexOf(entity);
-      if (entitiesIndex !== -1) entities.splice(entitiesIndex, 1).id;
-
-      const collidableIndex = collidable.indexOf(entity);
-      if (collidableIndex !== -1) collidable.splice(collidableIndex, 1).id;
-
-      if (entity.isEnemy) {
-        const enemiesIndex = enemies.indexOf(entity);
-        if (enemiesIndex !== -1) enemies.splice(enemiesIndex, 1).id;
-      }
-
-      if (!entity.isPlaying || !entity.parentElement) continue;
-
-      if (entity.isEnemy) {
-        scene.sceneEl.components.pool__enemy.returnEntity(entity);
-      } else if (entity.isProjectile) {
-        scene.sceneEl.components.pool__projectile.returnEntity(entity);
-      } else {
-        entity.parentElement.removeChild(entity);
-      }
-    }
-    entitiesToRemove.length = 0;
-  }
-});
-
 //
 // Entity factories
 //
@@ -285,20 +320,25 @@ AFRAME.registerSystem("removal-system", {
 // Pooling optimization.
 const enemyAsset = document.createElement("a-mixin");
 enemyAsset.id = "enemy";
+enemyAsset.setAttribute("enemy", "");
 enemyAsset.setAttribute("geometry", "primitive: box; width: 0.8; height: 0.8; depth: 0.8");
 enemyAsset.setAttribute("material", "color: green");
 enemyAsset.setAttribute("velocity", "z: 1.5");
 enemyAsset.setAttribute("collider", "colliderSize: 0.8;");
 enemyAsset.setAttribute("explosive", "destructible: false");
 scene.sceneEl.append(enemyAsset);
-scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? 2000 : 200};`);
+scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? 20 : 200};`);
 
+let ec = 0;
 function createEnemy() {
   const entity = scene.sceneEl.components.pool__enemy.requestEntity();
+  entity.tag = `enemy-${ec++}`;
   entity.isEnemy = true;
   entities.push(entity);
   collidable.push(entity);
+  explosives.push(entity);
   enemies.push(entity);
+  velocities.push(entity);
   entity.play();
   return entity;
 }
@@ -311,6 +351,7 @@ function createMine() {
   entity.setAttribute("explosive", "");
   entities.push(entity);
   collidable.push(entity);
+  explosives.push(entity);
   scene.add(entity);
   return entity;
 }
@@ -327,11 +368,15 @@ projectileAsset.setAttribute("explosive", "");
 scene.sceneEl.append(projectileAsset);
 scene.sceneEl.setAttribute("pool__projectile", "mixin: projectile; size: 100;");
 
+let pc = 0;
 function createProjectile() {
   const entity = scene.sceneEl.components.pool__projectile.requestEntity();
+  entity.tag = `projectile-${pc++}`;
   entity.isProjectile = true;
   entities.push(entity);
   collidable.push(entity);
+  explosives.push(entity);
+  velocities.push(entity);
   entity.play();
   return entity;
 }
@@ -347,6 +392,7 @@ function createTurret(standalone = true, firingRate) {
     collidable.push(entity);
     scene.add(entity);
   }
+  turrets.push(entity);
   return entity;
 }
 
@@ -356,7 +402,7 @@ function createTurretVehicle() {
   entity.setAttribute("geometry", { primitive: "box", width: 0.9, height: 0.9, depth: 0.9 });
   entity.setAttribute("material", { color: "yellow" });
   entity.setAttribute("collider", { colliderSize: 0.9, collides: "enemy" });
-  const turret = createTurret(false, 1);
+  const turret = createTurret(false, 5);
   turret.object3D.position.y = 0.5;
   entity.append(turret);
   entities.push(entity);
@@ -378,10 +424,10 @@ function createCollector() {
 }
 
 if (APP.perfMode) {
-  for (let i = 0; i < 5; i++) {
-    for (let j = 0; j < 4; j++) {
-      const turret = createTurretVehicle();
-      turret.object3D.position.set(i - 2, 0, j + 2);
+  for (let i = 0; i < 1; i++) {
+    for (let j = 0; j < 1; j++) {
+      const turret = createTurret(true, 10);
+      turret.object3D.position.set(i - 2, 0, j - 2);
     }
   }
 }
