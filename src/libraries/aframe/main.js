@@ -109,7 +109,6 @@ const velocities = [];
 
 AFRAME.registerSystem("velocity-system", {
   tick(time, delta) {
-    console.log("velocity tick");
     for (const entity of velocities) {
       const { velocity } = entity.components;
       const deltaSeconds = (APP.perfMode ? 30 : delta) / 1000;
@@ -120,28 +119,25 @@ AFRAME.registerSystem("velocity-system", {
   }
 });
 
-window.calls = 0;
 AFRAME.registerSystem("collision-system", {
   tick() {
     const entities = collidable;
-    console.log("collision tick", window.calls, entities.map(e => e.tag));
+    if (APP.perfMode && scene.frame === 75) console.log("entities:", entities.length);
     for (const entity of entities) {
       const ec = entity.components.collider;
       ec.collided = null;
       entity.object3D.updateMatrixWorld();
       scene.updateBox(ec.offsetCollider, ec.collider, entity.object3D.matrixWorld);
     }
-    if (scene.frame === 70) console.log("entities:", entities.length);
     for (let i = 0; i < entities.length; i++) {
       const e1 = entities[i];
       const e1c = e1.components.collider;
       for (let j = i + 1; j < entities.length; j++) {
         const e2 = entities[j];
-        if (e1c.data.collides && !e2.components.hasOwnProperty(e1c.data.collides)) { console.log("bail"); continue; }
+        if (e1c.data.collides && !e2.components.hasOwnProperty(e1c.data.collides)) continue;
         const e2c = e2.components.collider;
-        window.calls++;
+        if (APP.perfMode) scene.intersectsBoxCalls++;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
-        console.log("collision ", e1.tag, e2.tag);
         e1c.collided = e2;
         e2c.collided = e1;
       }
@@ -152,7 +148,6 @@ AFRAME.registerSystem("collision-system", {
 const entitiesToRemove = [];
 AFRAME.registerSystem("explosive-system", {
   tick() {
-    console.log("explosive tick");
     for (let i = 0; i < explosives.length; i++) {
       const entity = explosives[i];
       const { collided } = entity.components.collider;
@@ -169,7 +164,6 @@ AFRAME.registerSystem("explosive-system", {
 
 AFRAME.registerSystem("removal-system", {
   tick() {
-    console.log("removal tick", entitiesToRemove.map(e => e.tag));
     for (let i = 0; i < entitiesToRemove.length; i++) {
       const entity = entitiesToRemove[i];
 
@@ -209,7 +203,6 @@ AFRAME.registerSystem("removal-system", {
 
 AFRAME.registerSystem("turret-system", {
   tick(time, delta) {
-    console.log("turret tick");
     for (const entity of turrets) {
       const { turret } = entity.components;
       turret.timeUntilFire -= (APP.perfMode ? 30 : delta) / 1000;
@@ -327,7 +320,7 @@ enemyAsset.setAttribute("velocity", "z: 1.5");
 enemyAsset.setAttribute("collider", "colliderSize: 0.8;");
 enemyAsset.setAttribute("explosive", "destructible: false");
 scene.sceneEl.append(enemyAsset);
-scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? 20 : 200};`);
+scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? APP.PERF_ENEMIES : 200};`);
 
 let ec = 0;
 function createEnemy() {
@@ -384,7 +377,7 @@ function createProjectile() {
 function createTurret(standalone = true, firingRate) {
   const entity = document.createElement("a-entity");
   entity.setAttribute("turret", { firingRate });
-  entity.setAttribute("geometry", { primitive: "box", width: 0.8, height: 0.8, depth: 0.8 });
+  entity.setAttribute("geometry", { primitive: "box", width: 0.7, height: 0.7, depth: 0.7 });
   entity.setAttribute("material", { color: "blue" });
   if (standalone) {
     entity.setAttribute("collider", { colliderSize: 0.8, collides: "enemy" });
@@ -402,7 +395,7 @@ function createTurretVehicle() {
   entity.setAttribute("geometry", { primitive: "box", width: 0.9, height: 0.9, depth: 0.9 });
   entity.setAttribute("material", { color: "yellow" });
   entity.setAttribute("collider", { colliderSize: 0.9, collides: "enemy" });
-  const turret = createTurret(false, 5);
+  const turret = createTurret(false, 1);
   turret.object3D.position.y = 0.5;
   entity.append(turret);
   entities.push(entity);
@@ -424,10 +417,10 @@ function createCollector() {
 }
 
 if (APP.perfMode) {
-  for (let i = 0; i < 1; i++) {
-    for (let j = 0; j < 1; j++) {
-      const turret = createTurret(true, 10);
-      turret.object3D.position.set(i - 2, 0, j - 2);
+  for (let i = 0; i < 5; i++) {
+    for (let j = 0; j < 4; j++) {
+      const turret = createTurretVehicle();
+      turret.object3D.position.set(i - 2, 0, j + 2);
     }
   }
 }

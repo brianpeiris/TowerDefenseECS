@@ -4,7 +4,6 @@ const rStats = require("rstatsjs/src/rStats.js");
 class Scene {
   constructor(update, perfMode) {
     this._scene = new THREE.Scene();
-    window.scene = this._scene;
 
     const light = new THREE.DirectionalLight();
     light.position.x = 0.5;
@@ -36,13 +35,13 @@ class Scene {
     this.elapsed = 0;
     this._playing = false;
     this.frame = 0;
+    this.intersectsBoxCalls = 0;
     this._renderer.setAnimationLoop(() => {
       if (!this._playing) return;
-      console.log("tick", this.frame);
       this.frame++;
-      if (perfMode && this.frame === 15) {
+      if (perfMode && this.frame === 75) {
         this.stop();
-        console.log("intersectsBox calls:", window.calls, "frame:", stats("frame").value());
+        console.log("intersectsBox calls:", this.intersectsBoxCalls, "frame:", stats("frame").value());
       }
       this.delta = perfMode ? 30 / 1000 : clock.getDelta();
       this.elapsed = clock.elapsedTime;
@@ -92,14 +91,16 @@ class Scene {
     this._scene.add(obj);
   };
   createBox = (() => {
-    const boxGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+    const geometries = {};
     const materials = {};
     return (color, size = 0.8) => {
+      if (!geometries[size]) {
+        geometries[size] = new THREE.BoxBufferGeometry(size, size, size);
+      }
       if (!materials[color]) {
         materials[color] = new THREE.MeshStandardMaterial({ color });
       }
-      const mesh = new THREE.Mesh(boxGeometry, materials[color]);
-      mesh.scale.setScalar(size);
+      const mesh = new THREE.Mesh(geometries[size], materials[color]);
       return mesh;
     };
   })();
