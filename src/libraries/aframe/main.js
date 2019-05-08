@@ -15,8 +15,6 @@ const scene = new Scene(APP.perfMode);
 // Components
 //
 
-AFRAME.registerComponent("enemy", {});
-
 AFRAME.registerComponent("velocity", {
   schema: {
     x: { default: 0 },
@@ -24,7 +22,7 @@ AFRAME.registerComponent("velocity", {
     z: { default: 0 }
   },
   play() {
-    // Optimization to avoid setAttribute.
+    // A-Frame optimization to avoid setAttribute.
     this.x = this.data.x;
     this.y = this.data.y;
     this.z = this.data.z;
@@ -99,7 +97,7 @@ AFRAME.registerComponent("collector", {
 // Systems
 //
 
-// Optimization to avoid querySelectorAll
+// A-Frame optimization to avoid querySelectorAll
 const entities = [];
 const collidable = [];
 const explosives = [];
@@ -310,7 +308,7 @@ if (!APP.perfMode) {
 // Entity factories
 //
 
-// Pooling optimization.
+// A-Frame pooling optimization to save on enemy destruction.
 const enemyAsset = document.createElement("a-mixin");
 enemyAsset.id = "enemy";
 enemyAsset.setAttribute("enemy", "");
@@ -347,7 +345,7 @@ function createMine() {
   return entity;
 }
 
-// Pooling optimization for projectiles, since we create and destroy a lot of these per tick.
+// A-Frame pooling optimization for projectiles, since we create and destroy a lot of these per tick.
 const projectileAsset = document.createElement("a-mixin");
 projectileAsset.id = "projectile";
 projectileAsset.setAttribute("geometry", "primitive: box; width: 0.2; height: 0.2; depth: 0.2");

@@ -326,10 +326,8 @@ if (!APP.perfMode) {
 // Entity factories
 //
 
-let ec = 0;
 function createEnemy() {
   const entity = entities.createEntity();
-  entity.tag = `enemy-${ec++}`;
   entity.addTag("enemy");
   entity.addComponent(Mesh);
   entity.mesh.mesh = scene.createBox("green");
@@ -355,10 +353,8 @@ function createMine() {
   return entity;
 }
 
-let pc = 0;
 function createProjectile() {
   const entity = entities.createEntity();
-  entity.tag = `projectile-${pc++}`;
   entity.addTag("projectile");
   entity.addComponent(Mesh);
   entity.mesh.mesh = scene.createBox("red", 0.2);
