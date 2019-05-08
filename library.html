@@ -23,13 +23,15 @@
       }
       #info-container {
         display: flex;
-        justify-content: center;
+        align-items: center;
+        flex-direction: column;
       }
       #info {
         font-size: 18pt;
         margin-top: 70px;
         max-width: 200px;
       }
+      #continue { display: none; color: white; font-size: 10pt; }
       #itemSelection {
         position: absolute;
         margin-left: 1em;
@@ -80,7 +82,10 @@
   </head>
   <body>
     <h1 id="heading"></h1>
-    <div id="info-container"><div id="info"></div></div>
+    <div id="info-container">
+      <div id="info"></div>
+      <a href="&continue" id="continue" target="_parent">continue running</a>
+    </div>
     <template id="itemTemplate">
       <input name="item" type="radio" id="" value="" checked /><label for=""></label>
     </template>
