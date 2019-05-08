@@ -40,7 +40,7 @@ class Scene {
       if (!this._playing) return;
       this.frame++;
       if (perfMode && this.frame === 75) {
-        this.stop();
+        if (!location.search.includes("continue")) this.stop();
         console.log("frame:", stats("frame").value());
       }
       this.delta = perfMode ? 30 / 1000 : clock.getDelta();
