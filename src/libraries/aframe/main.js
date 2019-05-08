@@ -122,8 +122,8 @@ AFRAME.registerSystem("velocity-system", {
 AFRAME.registerSystem("collision-system", {
   tick() {
     const entities = collidable;
-    if (APP.perfMode && scene.frame === 75) console.log("entities:", entities.length);
-    for (const entity of entities) {
+    for (let i = 0; i < entities.length; i++) {
+      const entity = entities[i];
       const ec = entity.components.collider;
       ec.collided = null;
       entity.object3D.updateMatrixWorld();
@@ -134,7 +134,7 @@ AFRAME.registerSystem("collision-system", {
       const e1c = e1.components.collider;
       for (let j = i + 1; j < entities.length; j++) {
         const e2 = entities[j];
-        if (e1c.data.collides && !e2.components.hasOwnProperty(e1c.data.collides)) continue;
+        if (e1c.data.collides && e2.className !== e1c.data.collides) continue;
         const e2c = e2.components.collider;
         if (APP.perfMode) scene.intersectsBoxCalls++;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
@@ -182,16 +182,16 @@ AFRAME.registerSystem("removal-system", {
       const velocityIndex = velocities.indexOf(entity);
       if (velocityIndex !== -1) velocities.splice(velocityIndex, 1).id;
 
-      if (entity.isEnemy) {
+      if (entity.className === "enemy") {
         const enemiesIndex = enemies.indexOf(entity);
         if (enemiesIndex !== -1) enemies.splice(enemiesIndex, 1).id;
       }
 
       if (!entity.isPlaying || !entity.parentElement) continue;
 
-      if (entity.isEnemy) {
+      if (entity.className === "enemy") {
         scene.sceneEl.components.pool__enemy.returnEntity(entity);
-      } else if (entity.isProjectile) {
+      } else if (entity.className === "projectile") {
         scene.sceneEl.components.pool__projectile.returnEntity(entity);
       } else {
         entity.parentElement.removeChild(entity);
@@ -246,7 +246,7 @@ AFRAME.registerSystem("placement-system", {
       for (const entity of entities) {
         entity.object3D.getWorldPosition(this.worldPosition);
         const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-        if (!entity.isProjectile && x === ex && z === ez) {
+        if (entity.className !== "projectile" && x === ex && z === ez) {
           this.placementValid = false;
         }
       }
@@ -322,11 +322,9 @@ enemyAsset.setAttribute("explosive", "destructible: false");
 scene.sceneEl.append(enemyAsset);
 scene.sceneEl.setAttribute("pool__enemy", `mixin: enemy; size: ${APP.perfMode ? APP.PERF_ENEMIES : 200};`);
 
-let ec = 0;
 function createEnemy() {
   const entity = scene.sceneEl.components.pool__enemy.requestEntity();
-  entity.tag = `enemy-${ec++}`;
-  entity.isEnemy = true;
+  entity.className = "enemy";
   entities.push(entity);
   collidable.push(entity);
   explosives.push(entity);
@@ -361,11 +359,9 @@ projectileAsset.setAttribute("explosive", "");
 scene.sceneEl.append(projectileAsset);
 scene.sceneEl.setAttribute("pool__projectile", "mixin: projectile; size: 100;");
 
-let pc = 0;
 function createProjectile() {
   const entity = scene.sceneEl.components.pool__projectile.requestEntity();
-  entity.tag = `projectile-${pc++}`;
-  entity.isProjectile = true;
+  entity.className = "projectile";
   entities.push(entity);
   collidable.push(entity);
   explosives.push(entity);

@@ -44,7 +44,7 @@ class Scene {
       tick: () => {
         this.frame++;
         if (perfMode && this.frame === 75) {
-          //this.stop();
+          this.stop();
           console.log("frame:", stats("frame").value());
         }
         stats("frame").tick();
