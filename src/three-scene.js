@@ -40,8 +40,8 @@ class Scene {
       if (!this._playing) return;
       this.frame++;
       if (perfMode && this.frame === 75) {
-        this.stop();
-        console.log("intersectsBox calls:", this.intersectsBoxCalls, "frame:", stats("frame").value());
+        //this.stop();
+        console.log("frame:", stats("frame").value());
       }
       this.delta = perfMode ? 30 / 1000 : clock.getDelta();
       this.elapsed = clock.elapsedTime;

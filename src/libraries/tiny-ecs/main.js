@@ -115,7 +115,6 @@ class CollisionSystem {
         const e2 = this.query[j];
         if (e1c.collides && !e2.hasTag(e1c.collides)) continue;
         const e2c = e2.collider;
-        if (APP.perfMode) scene.intersectsBoxCalls++;
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
         e1c.collided = e2;
         e2c.collided = e1;
