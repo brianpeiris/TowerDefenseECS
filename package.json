@@ -1,5 +1,10 @@
 {
+  "name": "towerdefenseecs",
   "private": true,
+  "scripts": {
+    "install": "node ./scripts/install.js",
+    "start": "node ./scripts/start.js"
+  },
   "dependencies": {
     "rstatsjs": "^1.0.1",
     "three": "^0.101.1"
