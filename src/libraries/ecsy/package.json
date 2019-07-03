@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "ecsy": "git+https://github.com/fernandojsg/ecsy.git"
+  }
+}
