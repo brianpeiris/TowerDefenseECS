@@ -2,7 +2,7 @@
 // App Boilerplate
 //
 
-const { World, System } = require("ecsy");
+const { World, System, TagComponent } = require("ecsy");
 
 const THREE = require("three");
 const App = require("../../app.js");
@@ -23,6 +23,9 @@ const world = new World();
 
 class Velocity {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.x = 0;
     this.y = 0;
     this.z = 0;
@@ -31,18 +34,27 @@ class Velocity {
 
 class Gravity {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.force = -9.8;
   }
 }
 
 class Mesh {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.mesh = null;
   }
 }
 
 class Collider {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.collider = null;
     this.collides = null;
     this.collided = null;
@@ -52,14 +64,24 @@ class Collider {
 
 class Explosive {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.destructible = true;
   }
 }
 
-class ToRemove {}
+class ToRemove extends TagComponent {}
+
+class Enemy extends TagComponent {}
+
+class Projectile extends TagComponent {}
 
 class Turret {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.firingRate = 1 / 2;
     this.timeUntilFire = 1 / this.firingRate;
   }
@@ -67,6 +89,9 @@ class Turret {
 
 class Vehicle {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.speed = 1;
     this.onboard = null;
   }
@@ -74,6 +99,9 @@ class Vehicle {
 
 class Collector {
   constructor() {
+    this.reset();
+  }
+  reset() {
     this.rate = 20;
   }
 }
@@ -120,7 +148,6 @@ class VelocitySystem extends System {
   }
 }
 
-const noop = () => {};
 class CollisionSystem extends System {
   init() {
     return {
@@ -130,7 +157,6 @@ class CollisionSystem extends System {
     };
   }
   execute() {
-    noop();
     for (const entity of this.queries.entities) {
       const ec = entity.getMutableComponent(Collider);
       ec.collided = null;
@@ -143,7 +169,7 @@ class CollisionSystem extends System {
       const e1c = e1.getMutableComponent(Collider);
       for (let j = i + 1; j < this.queries.entities.length; j++) {
         const e2 = this.queries.entities[j];
-        if (e1c.collides && !e2.hasTag(e1c.collides)) continue;
+        if (e1c.collides && !e2.hasComponent(e1c.collides)) continue;
         const e2c = e2.getMutableComponent(Collider);
         if (!e1c.offsetCollider.intersectsBox(e2c.offsetCollider)) continue;
         e1c.collided = e2;
@@ -267,7 +293,7 @@ class PlacementSystem extends System {
       for (const entity of this.queries.entities) {
         entity.getComponent(Mesh).mesh.getWorldPosition(this.worldPosition);
         const [ex, ez] = [Math.round(this.worldPosition.x), Math.round(this.worldPosition.z)];
-        if (!entity.hasTag("projectile") && x === ex && z === ez) {
+        if (!entity.hasComponent(Projectile) && x === ex && z === ez) {
           this.placementValid = false;
         }
       }
@@ -344,20 +370,19 @@ class EnemyWaveSystem extends System {
   }
 }
 
-class GameOverSystem {
-  init(enemyWaveSystem) {
-    this.enemyWaveSystem = enemyWaveSystem;
+class GameOverSystem extends System {
+  init() {
     this.tempBox = new THREE.Box3();
     this.collider = new THREE.Box3();
     this.collider.setFromCenterAndSize(new THREE.Vector3(0, 0, 6), new THREE.Vector3(5, 1, 1));
     return {
       queries: {
-        entities: { tags: ["enemy"] }
+        entities: { components: [Enemy] }
       }
     };
   }
-  execute() {
-    if (!this.queries.entities.length && !this.enemyWaveSystem.currentWave) {
+  execute(delta, elapsed) {
+    if (!this.queries.entities.length && !APP.getCurrentWave(elapsed)) {
       scene.stop();
       APP.setInfo("You Win!");
       return;
@@ -383,8 +408,7 @@ world.registerSystem(ResourceSystem);
 world.registerSystem(PlacementSystem);
 world.registerSystem(TurretSystem);
 world.registerSystem(VehicleSystem);
-//const enemyWaveSystem = new EnemyWaveSystem(entities);
-//world.registerSystem(EnemyWaveSystem);
+world.registerSystem(EnemyWaveSystem);
 if (!APP.perfMode) {
   world.registerSystem(GameOverSystem);
 }
@@ -395,7 +419,7 @@ if (!APP.perfMode) {
 
 function createEnemy() {
   const entity = world.createEntity();
-  entity.addTag("enemy");
+  entity.addComponent(Enemy);
   const mesh = scene.createBox("green");
   entity.addComponent(Mesh, { mesh });
   entity.addComponent(Velocity, { z: 1.5 });
@@ -407,10 +431,9 @@ function createEnemy() {
 
 function createMine() {
   const entity = world.createEntity();
-  entity.addTag("mine");
   const mesh = scene.createBox("red");
   entity.addComponent(Mesh, { mesh });
-  entity.addComponent(Collider, { collides: "enemy", collider: new THREE.Box3().setFromObject(mesh) });
+  entity.addComponent(Collider, { collides: Enemy, collider: new THREE.Box3().setFromObject(mesh) });
   entity.addComponent(Explosive);
   scene.add(mesh);
   return entity;
@@ -418,10 +441,10 @@ function createMine() {
 
 function createProjectile() {
   const entity = world.createEntity();
-  entity.addTag("projectile");
+  entity.addComponent(Projectile);
   const mesh = scene.createBox("red", 0.2);
   entity.addComponent(Mesh, { mesh });
-  entity.addComponent(Collider, { collides: "enemy", collider: new THREE.Box3().setFromObject(mesh) });
+  entity.addComponent(Collider, { collides: Enemy, collider: new THREE.Box3().setFromObject(mesh) });
   entity.addComponent(Explosive);
   entity.addComponent(Gravity);
   entity.addComponent(Velocity, { z: -20 });
@@ -440,7 +463,7 @@ function createTurret(withCollider = true, firingRate) {
   const mesh = scene.createBox("blue", 0.7);
   entity.addComponent(Mesh, { mesh });
   if (withCollider) {
-    entity.addComponent(Collider, { collides: "enemy", collider: new THREE.Box3().setFromObject(mesh) });
+    entity.addComponent(Collider, { collides: Enemy, collider: new THREE.Box3().setFromObject(mesh) });
   }
   scene.add(mesh);
   return entity;
@@ -450,7 +473,7 @@ function createTurretVehicle() {
   const entity = world.createEntity();
   const mesh = scene.createBox("yellow", 0.9);
   entity.addComponent(Mesh, { mesh });
-  entity.addComponent(Collider, { collides: "enemy", collider: new THREE.Box3().setFromObject(mesh) });
+  entity.addComponent(Collider, { collides: Enemy, collider: new THREE.Box3().setFromObject(mesh) });
   const turret = createTurret(false, 1);
   const turretMesh = turret.getComponent(Mesh).mesh;
   turretMesh.position.y = 0.5;
@@ -465,7 +488,7 @@ function createCollector() {
   entity.addComponent(Collector);
   const mesh = scene.createBox("orange");
   entity.addComponent(Mesh, { mesh });
-  entity.addComponent(Collider, { collides: "enemy", collider: new THREE.Box3().setFromObject(mesh) });
+  entity.addComponent(Collider, { collides: Enemy, collider: new THREE.Box3().setFromObject(mesh) });
   scene.add(mesh);
   return entity;
 }
