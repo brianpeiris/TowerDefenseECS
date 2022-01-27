@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "rstatsjs": "^1.0.1",
-    "three": "^0.101.1"
+    "three": "^0.137.0"
   },
   "devDependencies": {
     "@babel/core": "^7.4.0",
